@@ -24,8 +24,9 @@ const MAX_FOULS = 5;
 let courtPositions = Array(6).fill(null);
 let selectedSpot = null;
 
+// MODIFIED: Added 'points: 0' to the player stats object.
 let playerStats = players.reduce((acc, player, i) => {
-	acc[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0 };
+	acc[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 };
 	return acc;
 }, {});
 
@@ -33,8 +34,9 @@ const savedStats = localStorage.getItem(PLAYTIME_KEY);
 if (savedStats) {
 	const parsedStats = JSON.parse(savedStats);
     players.forEach((player, i) => {
+        // Safely merge, providing defaults for any missing properties
         playerStats[i] = {
-            ...{ totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0 },
+            ...{ totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 },
             ...(parsedStats[i] || {})
         };
     });
@@ -80,7 +82,6 @@ function savePlaytimeToStorage() {
 	localStorage.setItem(PLAYTIME_KEY, JSON.stringify(playerStats));
 }
 
-// MODIFIED: Added a specific alert for when a player reaches 3 fouls.
 function addFoul(playerIndex) {
 	if (!isGameRunning) {
 		showAlert("You can only add fouls after the game has started.", "warning");
@@ -88,7 +89,7 @@ function addFoul(playerIndex) {
 	}
 	playerStats[playerIndex].fouls++;
 	savePlaytimeToStorage();
-	updateAllUI(); // A single function to refresh all relevant UI parts
+	updateAllUI();
 
 	const currentFouls = playerStats[playerIndex].fouls;
 	const playerName = players[playerIndex].name;
@@ -102,6 +103,32 @@ function addFoul(playerIndex) {
 	}
 }
 
+// NEW: Function to add a point to a player and update the team score.
+function addPoint(playerIndex) {
+    if (!isGameRunning) {
+		showAlert("You can only add points after the game has started.", "warning");
+		return;
+	}
+    playerStats[playerIndex].points++;
+    
+    // Update the main score on the Score tab
+    const homeAway = document.getElementById("matchHomeAway").value;
+    const teamToScore = (homeAway === 'Home' || homeAway === 'Away') ? homeAway.toLowerCase() : 'home'; // Default to home if not set
+    const scoreEl = document.getElementById(`score${teamToScore.charAt(0).toUpperCase() + teamToScore.slice(1)}Actual`);
+    let currentScore = parseInt(scoreEl.textContent, 10);
+    currentScore++;
+    scoreEl.textContent = currentScore;
+    
+    // Save the main score
+    const awayScore = teamToScore === 'home' ? document.getElementById("scoreAwayActual").textContent : scoreEl.textContent;
+    const homeScore = teamToScore === 'away' ? document.getElementById("scoreHomeActual").textContent : scoreEl.textContent;
+    localStorage.setItem("scoreTracking", JSON.stringify({ home: homeScore, away: awayScore }));
+
+    savePlaytimeToStorage();
+    updateAllUI();
+    showAlert(`Point for ${players[playerIndex].name}!`, "success");
+}
+
 // ===================== UI Update Functions ===================== //
 
 function updateAllUI() {
@@ -110,7 +137,7 @@ function updateAllUI() {
     updateBenchList();
 }
 
-// MODIFIED: updateCourtGrid now displays players and foul counts
+// MODIFIED: updateCourtGrid now displays points as well.
 function updateCourtGrid() {
     const courtGrid = document.getElementById("courtGrid");
     if (!courtGrid) return;
@@ -126,12 +153,14 @@ function updateCourtGrid() {
             const player = players[playerIndex];
             const stats = playerStats[playerIndex];
             spotButton.innerHTML = `
-                <span>#${player.number} ${player.name}</span><br>
-                <span class="foul-count">Fouls: ${stats.fouls}</span>
+                <span>#${player.number} ${player.name}</span>
+                <div>
+                    <span class="point-count">Pts: ${stats.points}</span> | 
+                    <span class="foul-count">Fouls: ${stats.fouls}</span>
+                </div>
             `;
             spotButton.classList.add('btn-info');
 
-            // Add visual warnings for fouls
             spotButton.classList.remove('fouls-warning', 'fouls-danger');
             if (stats.fouls >= MAX_FOULS) {
                 spotButton.classList.add('fouls-danger');
@@ -147,7 +176,7 @@ function updateCourtGrid() {
 }
 
 
-// MODIFIED: Simplified to only display info, no buttons
+// MODIFIED: Player lists now show points.
 function updatePlaytimeList() {
 	const list = document.getElementById("playtimeList");
 	if (!list) return;
@@ -162,25 +191,26 @@ function updatePlaytimeList() {
 		}
 		const mins = Math.floor(seconds / 60);
 		const secs = seconds % 60;
+        const stats = playerStats[i];
 
 		const item = document.createElement("li");
 		item.className = "list-group-item d-flex justify-content-between align-items-center";
-        if (playerStats[i].fouls >= MAX_FOULS) {
+        if (stats.fouls >= MAX_FOULS) {
 			item.classList.add("list-group-item-danger");
-		} else if (playerStats[i].fouls >= 3) {
+		} else if (stats.fouls >= 3) {
             item.classList.add("list-group-item-warning");
         }
 		item.innerHTML = `
 			<div class="player-info">
 				<strong>#${players[i].number} ${players[i].name}</strong>
-				<small class="d-block">Playtime: ${mins}m ${secs}s | Fouls: ${playerStats[i].fouls}</small>
+				<small class="d-block">Time: ${mins}m ${secs}s | Pts: ${stats.points} | Fouls: ${stats.fouls}</small>
 			</div>
 		`;
 		list.appendChild(item);
 	});
 }
 
-// MODIFIED: Simplified to only display info, no buttons
+// MODIFIED: Player lists now show points.
 function updateBenchList() {
 	const benchList = document.getElementById("benchList");
 	if (!benchList) return;
@@ -191,14 +221,14 @@ function updateBenchList() {
 			let seconds = playerStats[i].totalSeconds;
 			const mins = Math.floor(seconds / 60);
 			const secs = seconds % 60;
+            const stats = playerStats[i];
 
 			const item = document.createElement("li");
             item.className = "list-group-item d-flex justify-content-between align-items-center";
-            // No foul warnings needed for benched players but keeps consistency
 			item.innerHTML = `
 				<div class="player-info">
 					<strong>#${player.number} ${player.name}</strong>
-                    <small class="d-block">Playtime: ${mins}m ${secs}s | Fouls: ${playerStats[i].fouls}</small>
+                    <small class="d-block">Time: ${mins}m ${secs}s | Pts: ${stats.points} | Fouls: ${stats.fouls}</small>
 				</div>
 			`;
 			benchList.appendChild(item);
@@ -229,12 +259,11 @@ function rotateCourtClockwise() {
     showAlert("Players Rotated!", "info");
 }
 
+// MODIFIED: Reset function now also clears player points.
 function resetGame() {
     showConfirmModal("Are you sure you want to reset everything? This will clear all scores, play times, and fouls.", () => {
-        // Stop all timers
         courtPositions.forEach(playerIndex => stopPlayerTimer(playerIndex));
 
-        // Reset scores
         let scores = { home: 0, away: 0 };
         localStorage.removeItem("scoreTracking");
         document.getElementById("scoreHomeActual").textContent = "0";
@@ -242,15 +271,14 @@ function resetGame() {
         document.getElementById("homeScore").value = "";
         document.getElementById("awayScore").value = "";
 
-        // Reset game state
         isGameRunning = false;
         localStorage.removeItem(GAME_STATE_KEY);
         document.getElementById("startGameBtn").disabled = false;
 
-        // Reset player stats and court positions
         courtPositions = Array(6).fill(null);
         localStorage.removeItem(COURT_POSITIONS_KEY);
-        players.forEach((_, i) => (playerStats[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0 }));
+        // Reset all player stats including points
+        players.forEach((_, i) => (playerStats[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 }));
         localStorage.removeItem(PLAYTIME_KEY);
 
         updateAllUI();
@@ -279,7 +307,6 @@ function showConfirmModal(body, callback) {
 
     confirmModalBody.textContent = body;
 
-    // Clone and replace the button to remove old event listeners
     const newConfirmBtn = confirmModalBtn.cloneNode(true);
     confirmModalBtn.parentNode.replaceChild(newConfirmBtn, confirmModalBtn);
 
@@ -320,16 +347,22 @@ function showPlayerPicker() {
     playerModal.show();
 }
 
+// MODIFIED: Court action modal now handles the "Add Point" button.
 function showCourtActionModal() {
     const playerIndex = courtPositions[selectedSpot];
     const player = players[playerIndex];
     const modal = new bootstrap.Modal(document.getElementById("courtActionModal"));
     document.getElementById("courtActionModalLabel").textContent = `Action for ${player.name}`;
 
+    const addPointBtn = document.getElementById('modalAddPointBtn');
     const addFoulBtn = document.getElementById('modalAddFoulBtn');
     const subPlayerBtn = document.getElementById('modalSubPlayerBtn');
 
-    // Use .onclick to easily overwrite previous listeners
+    addPointBtn.onclick = () => {
+        addPoint(playerIndex);
+        modal.hide();
+    };
+
     addFoulBtn.onclick = () => {
         addFoul(playerIndex);
         modal.hide();
@@ -337,7 +370,6 @@ function showCourtActionModal() {
 
     subPlayerBtn.onclick = () => {
         modal.hide();
-        // Show player picker after a short delay to allow the first modal to close
         setTimeout(showPlayerPicker, 200);
     };
 
@@ -347,8 +379,6 @@ function showCourtActionModal() {
 
 // ===================== DOM Initialization ===================== //
 document.addEventListener("DOMContentLoaded", () => {
-	// --- Initialize Tabs and Match Details ---
-    // (This part of the code remains the same and is omitted for brevity)
     const initMatchDetails = () => {
 		const inputs = document.querySelectorAll("#matchID, #matchDate, #matchHomeAway, #matchType, #matchLocation, #opposingTeam");
 		const savedDetails = localStorage.getItem("matchDetails");
@@ -366,8 +396,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	};
 	initMatchDetails();
 
-    // --- Score Keeping Listeners ---
-    // (This part of the code remains the same and is omitted for brevity)
     (() => {
         const STORAGE_KEY = "scoreTracking";
         let scores = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { home: 0, away: 0 };
@@ -383,7 +411,6 @@ document.addEventListener("DOMContentLoaded", () => {
         updateScoreUI();
     })();
 
-	// --- Game Control Button Listeners ---
 	document.getElementById("startGameBtn").addEventListener("click", () => {
         if (isGameRunning) return;
         if (courtPositions.filter(p => p !== null).length < 6) {
@@ -401,7 +428,6 @@ document.addEventListener("DOMContentLoaded", () => {
 	document.getElementById("rotateBtn").addEventListener("click", rotateCourtClockwise);
 	document.getElementById("resetScore").addEventListener("click", resetGame);
 
-    // --- Court Grid Click Handler (Event Delegation) ---
     document.getElementById("courtGrid").addEventListener("click", (e) => {
         const spotButton = e.target.closest('.court-spot');
         if (!spotButton) return;
@@ -410,21 +436,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const playerIndex = courtPositions[selectedSpot];
 
         if (playerIndex !== null) {
-            // Player is on the spot, show action menu
             showCourtActionModal();
         } else {
-            // Spot is empty, show player picker
             showPlayerPicker();
         }
     });
 
-	// --- Initial UI Load ---
 	updateAllUI();
 	setInterval(() => {
 		if (isGameRunning) {
 			updateAllUI();
 		}
-	}, 1000); // Update timers every second
+	}, 1000);
 });
 
 if ("serviceWorker" in navigator) {

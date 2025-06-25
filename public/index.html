@@ -19,7 +19,7 @@
     integrity='sha512-7Pi/otdlbbCR+LnW+F7PwFcSDJOuUJB3OxtEHbg4vSMvzvJjde4Po1v4BR9Gdc9aXNUNFVUY+SK51wWT8WF0Gg=='
     crossorigin='anonymous'></script>
   <!-- custom -->
-  <link rel="stylesheet" href="css/styles.css?ver=2">
+  <link rel="stylesheet" href="css/styles.css?ver=3">
   <script src="js/app.js" defer></script>
 </head>
 
@@ -194,8 +194,8 @@
       </div>
     </div>
   </div>
-  
-  <!-- ========== NEW: Court Action Modal ========== -->
+
+  <!-- ========== Court Action Modal ========== -->
   <div class="modal fade" id="courtActionModal" tabindex="-1" aria-labelledby="courtActionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -203,8 +203,8 @@
           <h5 class="modal-title" id="courtActionModalLabel">Player Action</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body text-center">
-            <p>What would you like to do?</p>
+        <div class="modal-body d-grid gap-2">
+            <button id="modalAddPointBtn" class="btn btn-success"><i class="fa-solid fa-plus-circle"></i> Add Point</button>
             <button id="modalAddFoulBtn" class="btn btn-warning"><i class="fa-solid fa-flag"></i> Add Foul</button>
             <button id="modalSubPlayerBtn" class="btn btn-primary"><i class="fa-solid fa-right-left"></i> Substitute Player</button>
         </div>
@@ -215,7 +215,7 @@
     </div>
   </div>
 
-  <!-- NEW: Confirmation Modal -->
+  <!-- Confirmation Modal -->
   <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
