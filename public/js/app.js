@@ -169,7 +169,7 @@ function updateCourtGrid() {
             }
         } else {
             spotButton.textContent = `Spot ${i + 1}`;
-            spotButton.classList.add('btn-outline-secondary');
+            spotButton.classList.add('btn-outline-light');
         }
         courtGrid.appendChild(spotButton);
     }
