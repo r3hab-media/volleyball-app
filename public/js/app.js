@@ -126,7 +126,7 @@ function updateCourtGrid() {
             const player = players[playerIndex];
             const stats = playerStats[playerIndex];
             spotButton.innerHTML = `
-                <span>#${player.number} ${player.name}</span>
+                <span>#${player.number} ${player.name}</span><br>
                 <span class="foul-count">Fouls: ${stats.fouls}</span>
             `;
             spotButton.classList.add('btn-info');
