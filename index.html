@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volleyball App</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#F7D025" />
+  <link rel="icon" href="/icons/icon-192.png" />
+  <!-- vendors -->
+  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css'
+    integrity='sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg=='
+    crossorigin='anonymous' />
+  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css'
+    integrity='sha512-jnSuA4Ss2PkkikSOLtYs8BlYIeeIK1h99ty4YfvRPAlzr377vr3CXDb7sb7eEEBYjDtcYj+AjBH3FLv5uSJuXg=='
+    crossorigin='anonymous' />
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js'
+    integrity='sha512-7Pi/otdlbbCR+LnW+F7PwFcSDJOuUJB3OxtEHbg4vSMvzvJjde4Po1v4BR9Gdc9aXNUNFVUY+SK51wWT8WF0Gg=='
+    crossorigin='anonymous'></script>
+  <!-- custom -->
+  <link rel="stylesheet" href="css/styles.css?ver=2">
+  <script src="js/app.js" defer></script>
+</head>
+
+<body>
+  <div class="container py-2">
+    <div id="alertContainer" class="position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 1050;"></div>
+    <!--  Start tabs  -->
+    <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="pills-home-tab" data-bs-toggle="pill" data-bs-target="#pills-home"
+          type="button" role="tab" aria-controls="pills-home" aria-selected="true"><i
+            class="fa-solid fa-circle-info"></i> Match</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pills-profile-tab" data-bs-toggle="pill" data-bs-target="#pills-profile"
+          type="button" role="tab" aria-controls="pills-profile" aria-selected="false"><i
+            class="fa-solid fa-trophy"></i> Score</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pills-contact-tab" data-bs-toggle="pill" data-bs-target="#pills-contact"
+          type="button" role="tab" aria-controls="pills-contact" aria-selected="false"><i
+            class="fa-solid fa-volleyball"></i> Court</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pills-players-tab" data-bs-toggle="pill" data-bs-target="#pills-players"
+          type="button" role="tab" aria-controls="pills-players" aria-selected="false"><i
+            class="fa-solid fa-people-group"></i> Players</button>
+      </li>
+    </ul>
+    <div class="tab-content" id="pills-tabContent">
+      <div class="tab-pane fade show active" id="pills-home" role="tabpanel" aria-labelledby="pills-home-tab"
+        tabindex="0">
+        <h2>Match Details</h2>
+        <div class="row">
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" id="matchID" placeholder="Match ID">
+              <label for="matchID">Match ID</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="form-floating mb-3">
+              <input type="date" class="form-control" id="matchDate" placeholder="Match Date">
+              <label for="matchDate">Match Date</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 mb-3 mb-lg-0">
+            <div class="form-floating">
+              <select class="form-select" id="matchHomeAway">
+                <option selected disabled>-- Home/Away --</option>
+                <option value="Home">Home</option>
+                <option value="Away">Away</option>
+              </select>
+              <label for="matchHomeAway">Choose Home or Away</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 mb-3 mb-lg-0">
+            <div class="form-floating">
+              <select class="form-select" id="matchLocation">
+                <option selected disabled>-- Choose Location --</option>
+                <option value="Ahwatukee">Ahwatukee</option>
+                <option value="Chandler">Chandler</option>
+                <option value="Gilbert">Gilbert</option>
+              </select>
+              <label for="matchLocation">Choose YMCA</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4 mb-3 mb-lg-0">
+            <div class="form-floating">
+              <select class="form-select" id="matchType">
+                <option selected disabled>-- Match Type --</option>
+                <option value="Regular Season Game">Regular Season Game</option>
+                <option value="Finals">Finals</option>
+              </select>
+              <label for="matchType">Choose Match Type</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="form-floating mb-3">
+              <input type="text" class="form-control" id="opposingTeam" placeholder="Opposing Team Name">
+              <label for="opposingTeam">Opposing Team Name</label>
+            </div>
+          </div>
+          <div class="col-12 col-md-6 col-lg-4">
+            <h5>Final Score</h5>
+            <div class="row">
+              <div class="col-6">
+                <div class="form-floating mb-3">
+                  <input type="text" class="form-control" id="homeScore" placeholder="Home Team Score" readonly>
+                  <label for="homeScore">Home</label>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-floating mb-3">
+                  <input type="text" class="form-control" id="awayScore" placeholder="Away Team Score" readonly>
+                  <label for="awayScore">Away</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pills-profile" role="tabpanel" aria-labelledby="pills-profile-tab" tabindex="0">
+        <h2>Score Keeping</h2>
+        <div class="row">
+          <div class="col-12">
+            <div class="score-boxes">
+              <div id="scoreHome" class="score-box home d-flex align-items-center justify-content-center">
+                <i class="fas fa-arrow-down score-arrow down" data-team="home"></i>
+                <div class="score-box-inner d-flex align-items-center justify-content-center">
+                  <span id="scoreHomeActual">0</span>
+                </div>
+                <i class="fas fa-arrow-up score-arrow up" data-team="home"></i>
+              </div>
+              <div id="scoreAway" class="score-box away d-flex align-items-center justify-content-center">
+                <i class="fas fa-arrow-down score-arrow down" data-team="away"></i>
+                <div class="score-box-inner d-flex align-items-center justify-content-center">
+                  <span id="scoreAwayActual">0</span>
+                </div>
+                <i class="fas fa-arrow-up score-arrow up" data-team="away"></i>
+              </div>
+            </div>
+            <button type="button" id="finalScore" class="btn btn-outline-primary btn-sm mt-3">Final Score</button>
+            <button type="button" id="resetScore" class="btn btn-outline-primary btn-sm mt-3">Reset Game</button>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pills-contact" role="tabpanel" aria-labelledby="pills-contact-tab" tabindex="0">
+        <!-- ========== Start the game ========== -->
+        <div class="container">
+          <button id="startGameBtn" class="btn btn-success my-3">Start Game</button>
+          <button id="rotateBtn" class="btn btn-secondary">Rotate Clockwise</button>
+        </div>
+
+        <!-- ========== Volleyball Court Grid ========== -->
+        <div class="container py-3">
+          <h2>On Court</h2>
+          <div class="game-net">Game Net</div>
+          <div id="courtGrid" class="d-grid gap-2" style="grid-template-columns: repeat(3, 1fr); display: grid;">
+            <button class="court-spot btn btn-outline-secondary" data-spot="0">Spot 1</button>
+            <button class="court-spot btn btn-outline-secondary" data-spot="1">Spot 2</button>
+            <button class="court-spot btn btn-outline-secondary" data-spot="2">Spot 3</button>
+            <button class="court-spot btn btn-outline-secondary" data-spot="3">Spot 4</button>
+            <button class="court-spot btn btn-outline-secondary" data-spot="4">Spot 5</button>
+            <button class="court-spot btn btn-outline-secondary" data-spot="5">Spot 6</button>
+          </div>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pills-players" role="tabpanel" aria-labelledby="pills-players-tab" tabindex="0">
+        <!-- Bench -->
+        <div class="container mt-3">
+          <h4>Bench</h4>
+          <ul id="benchList" class="list-group"></ul>
+        </div>
+
+        <!-- ========== Player Playtime Display ========== -->
+        <div class="container mt-3">
+          <h4>Player Playtimes</h4>
+          <ul id="playtimeList" class="list-group"></ul>
+        </div>
+      </div>
+    </div>
+    <!--  End Tabs  -->
+
+  </div>
+
+  <!-- ========== Player Picker Modal ========== -->
+  <div class="modal fade" id="playerModal" tabindex="-1" aria-labelledby="playerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="playerModalLabel">Select Player</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="playerList">
+          <!-- JS will populate this -->
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
