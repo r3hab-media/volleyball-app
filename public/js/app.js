@@ -159,7 +159,7 @@ function updateCourtGrid() {
                     <span class="foul-count">Fouls: ${stats.fouls}</span>
                 </div>
             `;
-            spotButton.classList.add('btn-info');
+            spotButton.classList.add('btn-light');
 
             spotButton.classList.remove('fouls-warning', 'fouls-danger');
             if (stats.fouls >= MAX_FOULS) {

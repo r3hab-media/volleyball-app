@@ -3,11 +3,25 @@
 /* white: #F4EBEC */
 
 body {
-	background-color: #f7d025;
+	background-color: rgb(54, 54, 54);
+  color: white;
 }
 
 ::-webkit-scrollbar {
 	display: none;
+}
+
+.nav-link {
+  color: white;
+}
+
+.nav-link:hover {
+  color: rgb(185, 185, 185);
+}
+
+.nav-pills .nav-link.active, 
+.nav-pills .show>.nav-link {
+  background-color: #d5b500;
 }
 
 .score-boxes {
@@ -51,7 +65,7 @@ body {
 	justify-content: center;
 	width: 100px;
 	height: 100px;
-	background-color: #f0f0f0;
+	background-color: #666464;
 	border-radius: 50%;
 }
 
@@ -92,14 +106,14 @@ body {
 .point-count {
     font-size: 0.8rem;
     font-weight: bold;
-    color: #5cb85c; /* Green for points */
+    color: black; /* Green for points */
 }
 
 /* Style for the foul count text */
 .foul-count {
     font-size: 0.8rem;
     font-weight: bold;
-    color: #d9534f; /* Red for fouls */
+    color: black; /* Red for fouls */
 }
 
 /* Warning and danger styles for court spots */
@@ -111,6 +125,10 @@ body {
 .court-spot.fouls-danger {
     background-color: #d9534f !important; /* Bootstrap danger red */
     color: white !important;
+}
+
+.modal {
+  color:rgb(54, 54, 54)
 }
 
 
