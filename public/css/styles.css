@@ -91,7 +91,7 @@ body {
 }
 
 .court-spot {
-	height: 80px; /* Increased height to fit more info */
+	height: 100px; /* Increased height to fit more info */
 	font-size: 0.9rem;
 	padding: 0.25rem;
 	display: flex;
@@ -102,18 +102,31 @@ body {
     transition: background-color 0.3s ease; /* Smooth transition for color changes */
 }
 
-/* NEW: Style for the point count text */
-.point-count {
-    font-size: 0.8rem;
-    font-weight: bold;
-    color: black; /* Green for points */
+/* MODIFIED: Container for stats for better layout */
+.player-stats-container {
+    display: flex;
+    justify-content: space-evenly;
+    width: 100%;
+    margin: 4px 0;
 }
 
-/* Style for the foul count text */
-.foul-count {
+.point-count, .foul-count, .timer-count {
     font-size: 0.8rem;
     font-weight: bold;
-    color: black; /* Red for fouls */
+}
+
+.point-count {
+    color: black; 
+}
+
+.foul-count {
+    color: black; 
+}
+
+/* NEW: Style for the timer on the court spot */
+.timer-count {
+    font-size: 1rem;
+    color: #004a94;
 }
 
 /* Warning and danger styles for court spots */
@@ -134,12 +147,15 @@ body {
 
 @media screen and (min-width: 992px) {
 	.court-spot {
-		height: 140px;
+		height: 160px;
 		font-size: 1.2rem; /* Adjusted for more text */
 		font-weight: bold;
 	}
     .point-count, .foul-count {
         font-size: 1rem;
+    }
+    .timer-count {
+        font-size: 1.4rem;
     }
 }
 

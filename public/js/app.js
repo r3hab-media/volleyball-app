@@ -24,7 +24,6 @@ const MAX_FOULS = 5;
 let courtPositions = Array(6).fill(null);
 let selectedSpot = null;
 
-// MODIFIED: Added 'points: 0' to the player stats object.
 let playerStats = players.reduce((acc, player, i) => {
 	acc[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 };
 	return acc;
@@ -34,7 +33,6 @@ const savedStats = localStorage.getItem(PLAYTIME_KEY);
 if (savedStats) {
 	const parsedStats = JSON.parse(savedStats);
     players.forEach((player, i) => {
-        // Safely merge, providing defaults for any missing properties
         playerStats[i] = {
             ...{ totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 },
             ...(parsedStats[i] || {})
@@ -103,7 +101,6 @@ function addFoul(playerIndex) {
 	}
 }
 
-// NEW: Function to add a point to a player and update the team score.
 function addPoint(playerIndex) {
     if (!isGameRunning) {
 		showAlert("You can only add points after the game has started.", "warning");
@@ -111,15 +108,13 @@ function addPoint(playerIndex) {
 	}
     playerStats[playerIndex].points++;
     
-    // Update the main score on the Score tab
     const homeAway = document.getElementById("matchHomeAway").value;
-    const teamToScore = (homeAway === 'Home' || homeAway === 'Away') ? homeAway.toLowerCase() : 'home'; // Default to home if not set
+    const teamToScore = (homeAway === 'Home' || homeAway === 'Away') ? homeAway.toLowerCase() : 'home';
     const scoreEl = document.getElementById(`score${teamToScore.charAt(0).toUpperCase() + teamToScore.slice(1)}Actual`);
     let currentScore = parseInt(scoreEl.textContent, 10);
     currentScore++;
     scoreEl.textContent = currentScore;
     
-    // Save the main score
     const awayScore = teamToScore === 'home' ? document.getElementById("scoreAwayActual").textContent : scoreEl.textContent;
     const homeScore = teamToScore === 'away' ? document.getElementById("scoreHomeActual").textContent : scoreEl.textContent;
     localStorage.setItem("scoreTracking", JSON.stringify({ home: homeScore, away: awayScore }));
@@ -137,11 +132,11 @@ function updateAllUI() {
     updateBenchList();
 }
 
-// MODIFIED: updateCourtGrid now displays points as well.
+// MODIFIED: updateCourtGrid now calculates and displays playtime.
 function updateCourtGrid() {
     const courtGrid = document.getElementById("courtGrid");
     if (!courtGrid) return;
-    courtGrid.innerHTML = ""; // Clear the grid before redrawing
+    courtGrid.innerHTML = "";
 
     for (let i = 0; i < 6; i++) {
         const playerIndex = courtPositions[i];
@@ -152,12 +147,22 @@ function updateCourtGrid() {
         if (playerIndex !== null) {
             const player = players[playerIndex];
             const stats = playerStats[playerIndex];
+
+            // Calculate current playtime
+            let seconds = stats.totalSeconds;
+            if (stats.isOnCourt && stats.lastStartTime) {
+                seconds += Math.floor((Date.now() - stats.lastStartTime) / 1000);
+            }
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+
             spotButton.innerHTML = `
                 <span>#${player.number} ${player.name}</span>
-                <div>
-                    <span class="point-count">Pts: ${stats.points}</span> | 
+                <div class="player-stats-container">
+                    <span class="point-count">Pts: ${stats.points}</span>
                     <span class="foul-count">Fouls: ${stats.fouls}</span>
                 </div>
+                <span class="timer-count">${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</span>
             `;
             spotButton.classList.add('btn-light');
 
@@ -176,7 +181,6 @@ function updateCourtGrid() {
 }
 
 
-// MODIFIED: Player lists now show points.
 function updatePlaytimeList() {
 	const list = document.getElementById("playtimeList");
 	if (!list) return;
@@ -210,7 +214,6 @@ function updatePlaytimeList() {
 	});
 }
 
-// MODIFIED: Player lists now show points.
 function updateBenchList() {
 	const benchList = document.getElementById("benchList");
 	if (!benchList) return;
@@ -259,7 +262,6 @@ function rotateCourtClockwise() {
     showAlert("Players Rotated!", "info");
 }
 
-// MODIFIED: Reset function now also clears player points.
 function resetGame() {
     showConfirmModal("Are you sure you want to reset everything? This will clear all scores, play times, and fouls.", () => {
         courtPositions.forEach(playerIndex => stopPlayerTimer(playerIndex));
@@ -277,7 +279,6 @@ function resetGame() {
 
         courtPositions = Array(6).fill(null);
         localStorage.removeItem(COURT_POSITIONS_KEY);
-        // Reset all player stats including points
         players.forEach((_, i) => (playerStats[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 }));
         localStorage.removeItem(PLAYTIME_KEY);
 
@@ -347,7 +348,6 @@ function showPlayerPicker() {
     playerModal.show();
 }
 
-// MODIFIED: Court action modal now handles the "Add Point" button.
 function showCourtActionModal() {
     const playerIndex = courtPositions[selectedSpot];
     const player = players[playerIndex];
