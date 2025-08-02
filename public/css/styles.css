@@ -3,11 +3,25 @@
 /* white: #F4EBEC */
 
 body {
-	background-color: #f7d025;
+	background-color: rgb(54, 54, 54);
+  color: white;
 }
 
 ::-webkit-scrollbar {
 	display: none;
+}
+
+.nav-link {
+  color: white;
+}
+
+.nav-link:hover {
+  color: rgb(185, 185, 185);
+}
+
+.nav-pills .nav-link.active, 
+.nav-pills .show>.nav-link {
+  background-color: #d5b500;
 }
 
 .score-boxes {
@@ -51,7 +65,7 @@ body {
 	justify-content: center;
 	width: 100px;
 	height: 100px;
-	background-color: #f0f0f0;
+	background-color: #666464;
 	border-radius: 50%;
 }
 
@@ -77,16 +91,72 @@ body {
 }
 
 .court-spot {
-	height: 40px;
-	font-size: 1rem;
+	height: 100px; /* Increased height to fit more info */
+	font-size: 0.9rem;
+	padding: 0.25rem;
+	display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    line-height: 1.2;
+    transition: background-color 0.3s ease; /* Smooth transition for color changes */
 }
+
+/* MODIFIED: Container for stats for better layout */
+.player-stats-container {
+    display: flex;
+    justify-content: space-evenly;
+    width: 100%;
+    margin: 4px 0;
+}
+
+.point-count, .foul-count, .timer-count {
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.point-count {
+    color: black; 
+}
+
+.foul-count {
+    color: black; 
+}
+
+/* NEW: Style for the timer on the court spot */
+.timer-count {
+    font-size: 1rem;
+    color: #004a94;
+}
+
+/* Warning and danger styles for court spots */
+.court-spot.fouls-warning {
+    background-color: #f0ad4e !important; /* Bootstrap warning yellow */
+    color: white !important;
+}
+
+.court-spot.fouls-danger {
+    background-color: #d9534f !important; /* Bootstrap danger red */
+    color: white !important;
+}
+
+.modal {
+  color:rgb(54, 54, 54)
+}
+
 
 @media screen and (min-width: 992px) {
 	.court-spot {
-		height: 140px;
-		font-size: 2.5rem;
+		height: 160px;
+		font-size: 1.2rem; /* Adjusted for more text */
 		font-weight: bold;
 	}
+    .point-count, .foul-count {
+        font-size: 1rem;
+    }
+    .timer-count {
+        font-size: 1.4rem;
+    }
 }
 
 /* Net */
@@ -112,4 +182,8 @@ body {
 
 .game-net:not(:empty)::after {
 	margin-left: 0.5em;
+}
+
+.player-info {
+	flex-grow: 1;
 }

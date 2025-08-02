@@ -1,0 +1,28 @@
+# Firebase specific files and directories
+.firebase/
+firebase-debug.log
+firebase-debug.log.*
+.firebaserc.local # if you have local-only configurations
+
+# Node.js dependencies (if using Cloud Functions or other Node.js parts)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables (if used for secrets)
+.env
+.env.local
+
+# Build artifacts and temporary files (if applicable, e.g., for web projects)
+build/
+dist/
+tmp/
+*.log
+*.DS_Store # macOS specific
+Thumbs.db # Windows specific
+
+# IDE specific files
+.vscode/ # Visual Studio Code
+.idea/ # IntelliJ IDEA / WebStorm
+*.iml # IntelliJ IDEA
