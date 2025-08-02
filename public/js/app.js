@@ -17,6 +17,7 @@ const players = [
 	{ name: "Brielle", number: 8 },
 	{ name: "Kaelie", number: 9 },
 	{ name: "Natassja", number: 10 },
+	{ name: "Sadarrah", number: 11 },
 ];
 
 const PLAYTIME_KEY = "volleyballPlaytimes";
@@ -32,12 +33,12 @@ let playerStats = players.reduce((acc, player, i) => {
 const savedStats = localStorage.getItem(PLAYTIME_KEY);
 if (savedStats) {
 	const parsedStats = JSON.parse(savedStats);
-    players.forEach((player, i) => {
-        playerStats[i] = {
-            ...{ totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 },
-            ...(parsedStats[i] || {})
-        };
-    });
+	players.forEach((player, i) => {
+		playerStats[i] = {
+			...{ totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 },
+			...(parsedStats[i] || {}),
+		};
+	});
 
 	if (isGameRunning) {
 		const now = Date.now();
@@ -66,14 +67,14 @@ function startPlayerTimer(playerIndex) {
 }
 
 function stopPlayerTimer(playerIndex) {
-    if (playerIndex === null) return;
+	if (playerIndex === null) return;
 	const stat = playerStats[playerIndex];
 	if (stat.lastStartTime) {
 		const duration = Math.floor((Date.now() - stat.lastStartTime) / 1000);
 		stat.totalSeconds += duration;
 		stat.lastStartTime = null;
 	}
-    stat.isOnCourt = false;
+	stat.isOnCourt = false;
 }
 
 function savePlaytimeToStorage() {
@@ -102,92 +103,91 @@ function addFoul(playerIndex) {
 }
 
 function addPoint(playerIndex) {
-    if (!isGameRunning) {
+	if (!isGameRunning) {
 		showAlert("You can only add points after the game has started.", "warning");
 		return;
 	}
-    playerStats[playerIndex].points++;
-    
-    const homeAway = document.getElementById("matchHomeAway").value;
-    const teamToScore = (homeAway === 'Home' || homeAway === 'Away') ? homeAway.toLowerCase() : 'home';
-    const scoreEl = document.getElementById(`score${teamToScore.charAt(0).toUpperCase() + teamToScore.slice(1)}Actual`);
-    let currentScore = parseInt(scoreEl.textContent, 10);
-    currentScore++;
-    scoreEl.textContent = currentScore;
-    
-    const awayScore = teamToScore === 'home' ? document.getElementById("scoreAwayActual").textContent : scoreEl.textContent;
-    const homeScore = teamToScore === 'away' ? document.getElementById("scoreHomeActual").textContent : scoreEl.textContent;
-    localStorage.setItem("scoreTracking", JSON.stringify({ home: homeScore, away: awayScore }));
+	playerStats[playerIndex].points++;
 
-    savePlaytimeToStorage();
-    updateAllUI();
-    showAlert(`Point for ${players[playerIndex].name}!`, "success");
+	const homeAway = document.getElementById("matchHomeAway").value;
+	const teamToScore = homeAway === "Home" || homeAway === "Away" ? homeAway.toLowerCase() : "home";
+	const scoreEl = document.getElementById(`score${teamToScore.charAt(0).toUpperCase() + teamToScore.slice(1)}Actual`);
+	let currentScore = parseInt(scoreEl.textContent, 10);
+	currentScore++;
+	scoreEl.textContent = currentScore;
+
+	const awayScore = teamToScore === "home" ? document.getElementById("scoreAwayActual").textContent : scoreEl.textContent;
+	const homeScore = teamToScore === "away" ? document.getElementById("scoreHomeActual").textContent : scoreEl.textContent;
+	localStorage.setItem("scoreTracking", JSON.stringify({ home: homeScore, away: awayScore }));
+
+	savePlaytimeToStorage();
+	updateAllUI();
+	showAlert(`Point for ${players[playerIndex].name}!`, "success");
 }
 
 // ===================== UI Update Functions ===================== //
 
 function updateAllUI() {
-    updateCourtGrid();
-    updatePlaytimeList();
-    updateBenchList();
+	updateCourtGrid();
+	updatePlaytimeList();
+	updateBenchList();
 }
 
 // MODIFIED: updateCourtGrid now calculates and displays playtime.
 function updateCourtGrid() {
-    const courtGrid = document.getElementById("courtGrid");
-    if (!courtGrid) return;
-    courtGrid.innerHTML = "";
+	const courtGrid = document.getElementById("courtGrid");
+	if (!courtGrid) return;
+	courtGrid.innerHTML = "";
 
-    for (let i = 0; i < 6; i++) {
-        const playerIndex = courtPositions[i];
-        const spotButton = document.createElement("button");
-        spotButton.dataset.spot = i;
-        spotButton.classList.add('court-spot', 'btn');
+	for (let i = 0; i < 6; i++) {
+		const playerIndex = courtPositions[i];
+		const spotButton = document.createElement("button");
+		spotButton.dataset.spot = i;
+		spotButton.classList.add("court-spot", "btn");
 
-        if (playerIndex !== null) {
-            const player = players[playerIndex];
-            const stats = playerStats[playerIndex];
+		if (playerIndex !== null) {
+			const player = players[playerIndex];
+			const stats = playerStats[playerIndex];
 
-            // Calculate current playtime
-            let seconds = stats.totalSeconds;
-            if (stats.isOnCourt && stats.lastStartTime) {
-                seconds += Math.floor((Date.now() - stats.lastStartTime) / 1000);
-            }
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
+			// Calculate current playtime
+			let seconds = stats.totalSeconds;
+			if (stats.isOnCourt && stats.lastStartTime) {
+				seconds += Math.floor((Date.now() - stats.lastStartTime) / 1000);
+			}
+			const mins = Math.floor(seconds / 60);
+			const secs = seconds % 60;
 
-            spotButton.innerHTML = `
+			spotButton.innerHTML = `
                 <span>#${player.number} ${player.name}</span>
                 <div class="player-stats-container">
                     <span class="point-count">Pts: ${stats.points}</span>
                     <span class="foul-count">Fouls: ${stats.fouls}</span>
                 </div>
-                <span class="timer-count">${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</span>
+                <span class="timer-count">${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}</span>
             `;
-            spotButton.classList.add('btn-light');
+			spotButton.classList.add("btn-light");
 
-            spotButton.classList.remove('fouls-warning', 'fouls-danger');
-            if (stats.fouls >= MAX_FOULS) {
-                spotButton.classList.add('fouls-danger');
-            } else if (stats.fouls >= 3) {
-                spotButton.classList.add('fouls-warning');
-            }
-        } else {
-            spotButton.textContent = `Spot ${i + 1}`;
-            spotButton.classList.add('btn-outline-light');
-        }
-        courtGrid.appendChild(spotButton);
-    }
+			spotButton.classList.remove("fouls-warning", "fouls-danger");
+			if (stats.fouls >= MAX_FOULS) {
+				spotButton.classList.add("fouls-danger");
+			} else if (stats.fouls >= 3) {
+				spotButton.classList.add("fouls-warning");
+			}
+		} else {
+			spotButton.textContent = `Spot ${i + 1}`;
+			spotButton.classList.add("btn-outline-light");
+		}
+		courtGrid.appendChild(spotButton);
+	}
 }
-
 
 function updatePlaytimeList() {
 	const list = document.getElementById("playtimeList");
 	if (!list) return;
 	list.innerHTML = "";
 
-    courtPositions.forEach(i => {
-        if (i === null) return;
+	courtPositions.forEach((i) => {
+		if (i === null) return;
 
 		let seconds = playerStats[i].totalSeconds;
 		if (playerStats[i].isOnCourt && playerStats[i].lastStartTime) {
@@ -195,15 +195,15 @@ function updatePlaytimeList() {
 		}
 		const mins = Math.floor(seconds / 60);
 		const secs = seconds % 60;
-        const stats = playerStats[i];
+		const stats = playerStats[i];
 
 		const item = document.createElement("li");
 		item.className = "list-group-item d-flex justify-content-between align-items-center";
-        if (stats.fouls >= MAX_FOULS) {
+		if (stats.fouls >= MAX_FOULS) {
 			item.classList.add("list-group-item-danger");
 		} else if (stats.fouls >= 3) {
-            item.classList.add("list-group-item-warning");
-        }
+			item.classList.add("list-group-item-warning");
+		}
 		item.innerHTML = `
 			<div class="player-info">
 				<strong>#${players[i].number} ${players[i].name}</strong>
@@ -224,10 +224,10 @@ function updateBenchList() {
 			let seconds = playerStats[i].totalSeconds;
 			const mins = Math.floor(seconds / 60);
 			const secs = seconds % 60;
-            const stats = playerStats[i];
+			const stats = playerStats[i];
 
 			const item = document.createElement("li");
-            item.className = "list-group-item d-flex justify-content-between align-items-center";
+			item.className = "list-group-item d-flex justify-content-between align-items-center";
 			item.innerHTML = `
 				<div class="player-info">
 					<strong>#${player.number} ${player.name}</strong>
@@ -259,34 +259,33 @@ function rotateCourtClockwise() {
 	localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
 	updateAllUI();
 	savePlaytimeToStorage();
-    showAlert("Players Rotated!", "info");
+	showAlert("Players Rotated!", "info");
 }
 
 function resetGame() {
-    showConfirmModal("Are you sure you want to reset everything? This will clear all scores, play times, and fouls.", () => {
-        courtPositions.forEach(playerIndex => stopPlayerTimer(playerIndex));
+	showConfirmModal("Are you sure you want to reset everything? This will clear all scores, play times, and fouls.", () => {
+		courtPositions.forEach((playerIndex) => stopPlayerTimer(playerIndex));
 
-        let scores = { home: 0, away: 0 };
-        localStorage.removeItem("scoreTracking");
-        document.getElementById("scoreHomeActual").textContent = "0";
-        document.getElementById("scoreAwayActual").textContent = "0";
-        document.getElementById("homeScore").value = "";
-        document.getElementById("awayScore").value = "";
+		let scores = { home: 0, away: 0 };
+		localStorage.removeItem("scoreTracking");
+		document.getElementById("scoreHomeActual").textContent = "0";
+		document.getElementById("scoreAwayActual").textContent = "0";
+		document.getElementById("homeScore").value = "";
+		document.getElementById("awayScore").value = "";
 
-        isGameRunning = false;
-        localStorage.removeItem(GAME_STATE_KEY);
-        document.getElementById("startGameBtn").disabled = false;
+		isGameRunning = false;
+		localStorage.removeItem(GAME_STATE_KEY);
+		document.getElementById("startGameBtn").disabled = false;
 
-        courtPositions = Array(6).fill(null);
-        localStorage.removeItem(COURT_POSITIONS_KEY);
-        players.forEach((_, i) => (playerStats[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 }));
-        localStorage.removeItem(PLAYTIME_KEY);
+		courtPositions = Array(6).fill(null);
+		localStorage.removeItem(COURT_POSITIONS_KEY);
+		players.forEach((_, i) => (playerStats[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 }));
+		localStorage.removeItem(PLAYTIME_KEY);
 
-        updateAllUI();
-        showAlert("Game has been reset!", "warning");
-    });
+		updateAllUI();
+		showAlert("Game has been reset!", "warning");
+	});
 }
-
 
 // ===================== Modals and Alerts ===================== //
 function showAlert(message, type) {
@@ -302,84 +301,83 @@ function showAlert(message, type) {
 }
 
 function showConfirmModal(body, callback) {
-    const confirmModalBody = document.getElementById('confirmModalBody');
-    const confirmModalBtn = document.getElementById('confirmModalBtn');
-    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+	const confirmModalBody = document.getElementById("confirmModalBody");
+	const confirmModalBtn = document.getElementById("confirmModalBtn");
+	const confirmModal = new bootstrap.Modal(document.getElementById("confirmModal"));
 
-    confirmModalBody.textContent = body;
+	confirmModalBody.textContent = body;
 
-    const newConfirmBtn = confirmModalBtn.cloneNode(true);
-    confirmModalBtn.parentNode.replaceChild(newConfirmBtn, confirmModalBtn);
+	const newConfirmBtn = confirmModalBtn.cloneNode(true);
+	confirmModalBtn.parentNode.replaceChild(newConfirmBtn, confirmModalBtn);
 
-    newConfirmBtn.addEventListener('click', () => {
-        callback();
-        confirmModal.hide();
-    });
+	newConfirmBtn.addEventListener("click", () => {
+		callback();
+		confirmModal.hide();
+	});
 
-    confirmModal.show();
+	confirmModal.show();
 }
 
 function showPlayerPicker() {
-    const playerList = document.getElementById("playerList");
-    const playerModal = new bootstrap.Modal(document.getElementById("playerModal"));
-    playerList.innerHTML = "";
+	const playerList = document.getElementById("playerList");
+	const playerModal = new bootstrap.Modal(document.getElementById("playerModal"));
+	playerList.innerHTML = "";
 
-    players.forEach((player, index) => {
-        const isAlreadyOnCourt = courtPositions.includes(index);
-        const playerButton = document.createElement("button");
-        playerButton.className = "btn btn-outline-primary w-100 my-1";
-        playerButton.textContent = `#${player.number} ${player.name}`;
-        playerButton.disabled = isAlreadyOnCourt;
+	players.forEach((player, index) => {
+		const isAlreadyOnCourt = courtPositions.includes(index);
+		const playerButton = document.createElement("button");
+		playerButton.className = "btn btn-outline-primary w-100 my-1";
+		playerButton.textContent = `#${player.number} ${player.name}`;
+		playerButton.disabled = isAlreadyOnCourt;
 
-        playerButton.addEventListener("click", () => {
-            const prevPlayerIndex = courtPositions[selectedSpot];
-            if (prevPlayerIndex !== null) stopPlayerTimer(prevPlayerIndex);
+		playerButton.addEventListener("click", () => {
+			const prevPlayerIndex = courtPositions[selectedSpot];
+			if (prevPlayerIndex !== null) stopPlayerTimer(prevPlayerIndex);
 
-            courtPositions[selectedSpot] = index;
-            startPlayerTimer(index);
+			courtPositions[selectedSpot] = index;
+			startPlayerTimer(index);
 
-            localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
-            savePlaytimeToStorage();
-            updateAllUI();
-            playerModal.hide();
-        });
-        playerList.appendChild(playerButton);
-    });
-    playerModal.show();
+			localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
+			savePlaytimeToStorage();
+			updateAllUI();
+			playerModal.hide();
+		});
+		playerList.appendChild(playerButton);
+	});
+	playerModal.show();
 }
 
 function showCourtActionModal() {
-    const playerIndex = courtPositions[selectedSpot];
-    const player = players[playerIndex];
-    const modal = new bootstrap.Modal(document.getElementById("courtActionModal"));
-    document.getElementById("courtActionModalLabel").textContent = `Action for ${player.name}`;
+	const playerIndex = courtPositions[selectedSpot];
+	const player = players[playerIndex];
+	const modal = new bootstrap.Modal(document.getElementById("courtActionModal"));
+	document.getElementById("courtActionModalLabel").textContent = `Action for ${player.name}`;
 
-    const addPointBtn = document.getElementById('modalAddPointBtn');
-    const addFoulBtn = document.getElementById('modalAddFoulBtn');
-    const subPlayerBtn = document.getElementById('modalSubPlayerBtn');
+	const addPointBtn = document.getElementById("modalAddPointBtn");
+	const addFoulBtn = document.getElementById("modalAddFoulBtn");
+	const subPlayerBtn = document.getElementById("modalSubPlayerBtn");
 
-    addPointBtn.onclick = () => {
-        addPoint(playerIndex);
-        modal.hide();
-    };
+	addPointBtn.onclick = () => {
+		addPoint(playerIndex);
+		modal.hide();
+	};
 
-    addFoulBtn.onclick = () => {
-        addFoul(playerIndex);
-        modal.hide();
-    };
+	addFoulBtn.onclick = () => {
+		addFoul(playerIndex);
+		modal.hide();
+	};
 
-    subPlayerBtn.onclick = () => {
-        modal.hide();
-        setTimeout(showPlayerPicker, 200);
-    };
+	subPlayerBtn.onclick = () => {
+		modal.hide();
+		setTimeout(showPlayerPicker, 200);
+	};
 
-    modal.show();
+	modal.show();
 }
-
 
 // ===================== DOM Initialization ===================== //
 document.addEventListener("DOMContentLoaded", () => {
-    const initMatchDetails = () => {
+	const initMatchDetails = () => {
 		const inputs = document.querySelectorAll("#matchID, #matchDate, #matchHomeAway, #matchType, #matchLocation, #opposingTeam");
 		const savedDetails = localStorage.getItem("matchDetails");
 		if (savedDetails) {
@@ -388,59 +386,79 @@ document.addEventListener("DOMContentLoaded", () => {
 				if (matchDetails[input.id]) input.value = matchDetails[input.id];
 			});
 		}
-		inputs.forEach((input) => input.addEventListener("blur", () => {
-            const matchDetails = {};
-            inputs.forEach(i => matchDetails[i.id] = i.value);
-            localStorage.setItem("matchDetails", JSON.stringify(matchDetails));
-        }));
+		inputs.forEach((input) =>
+			input.addEventListener("blur", () => {
+				const matchDetails = {};
+				inputs.forEach((i) => (matchDetails[i.id] = i.value));
+				localStorage.setItem("matchDetails", JSON.stringify(matchDetails));
+			})
+		);
 	};
 	initMatchDetails();
 
-    (() => {
-        const STORAGE_KEY = "scoreTracking";
-        let scores = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { home: 0, away: 0 };
-        const scoreHomeEl = document.getElementById("scoreHomeActual");
-        const scoreAwayEl = document.getElementById("scoreAwayActual");
-        const updateScoreUI = () => {
-            scoreHomeEl.textContent = scores.home;
-            scoreAwayEl.textContent = scores.away;
-        };
-        document.querySelectorAll(".score-arrow.up").forEach(btn => btn.addEventListener('click', e => { scores[e.target.dataset.team]++; localStorage.setItem(STORAGE_KEY, JSON.stringify(scores)); updateScoreUI(); }));
-        document.querySelectorAll(".score-arrow.down").forEach(btn => btn.addEventListener('click', e => { if (scores[e.target.dataset.team] > 0) { scores[e.target.dataset.team]--; localStorage.setItem(STORAGE_KEY, JSON.stringify(scores)); updateScoreUI();} }));
-        document.getElementById("finalScore").addEventListener('click', () => { document.getElementById("homeScore").value = scores.home; document.getElementById("awayScore").value = scores.away; showAlert("Final Score Saved!", "success");});
-        updateScoreUI();
-    })();
+	(() => {
+		const STORAGE_KEY = "scoreTracking";
+		let scores = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { home: 0, away: 0 };
+		const scoreHomeEl = document.getElementById("scoreHomeActual");
+		const scoreAwayEl = document.getElementById("scoreAwayActual");
+		const updateScoreUI = () => {
+			scoreHomeEl.textContent = scores.home;
+			scoreAwayEl.textContent = scores.away;
+		};
+		document.querySelectorAll(".score-arrow.up").forEach((btn) =>
+			btn.addEventListener("click", (e) => {
+				scores[e.target.dataset.team]++;
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+				updateScoreUI();
+			})
+		);
+		document.querySelectorAll(".score-arrow.down").forEach((btn) =>
+			btn.addEventListener("click", (e) => {
+				if (scores[e.target.dataset.team] > 0) {
+					scores[e.target.dataset.team]--;
+					localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+					updateScoreUI();
+				}
+			})
+		);
+		document.getElementById("finalScore").addEventListener("click", () => {
+			document.getElementById("homeScore").value = scores.home;
+			document.getElementById("awayScore").value = scores.away;
+			showAlert("Final Score Saved!", "success");
+		});
+		updateScoreUI();
+	})();
 
 	document.getElementById("startGameBtn").addEventListener("click", () => {
-        if (isGameRunning) return;
-        if (courtPositions.filter(p => p !== null).length < 6) {
-            showAlert("Please select 6 players for the court before starting.", "warning");
-            return;
-        }
+		if (isGameRunning) return;
+		if (courtPositions.filter((p) => p !== null).length < 6) {
+			showAlert("Please select 6 players for the court before starting.", "warning");
+			return;
+		}
 		isGameRunning = true;
 		localStorage.setItem(GAME_STATE_KEY, JSON.stringify(true));
 		courtPositions.forEach(startPlayerTimer);
 		showAlert("Game Started!", "success");
 		document.getElementById("startGameBtn").disabled = true;
 	});
-    if(isGameRunning) document.getElementById("startGameBtn").disabled = true;
+	if (isGameRunning) document.getElementById("startGameBtn").disabled = true;
 
 	document.getElementById("rotateBtn").addEventListener("click", rotateCourtClockwise);
 	document.getElementById("resetScore").addEventListener("click", resetGame);
 
-    document.getElementById("courtGrid").addEventListener("click", (e) => {
-        const spotButton = e.target.closest('.court-spot');
-        if (!spotButton) return;
+	document.getElementById("courtGrid").addEventListener("click", (e) => {
+		const spotButton = e.target.closest(".court-spot");
+		if (!spotButton) return;
 
-        selectedSpot = parseInt(spotButton.dataset.spot);
-        const playerIndex = courtPositions[selectedSpot];
+		selectedSpot = parseInt(spotButton.dataset.spot);
+		const playerIndex = courtPositions[selectedSpot];
 
-        if (playerIndex !== null) {
-            showCourtActionModal();
-        } else {
-            showPlayerPicker();
-        }
-    });
+		if (playerIndex !== null) {
+			showCourtActionModal();
+		} else {
+			showPlayerPicker();
+		}
+	});
 
 	updateAllUI();
 	setInterval(() => {
