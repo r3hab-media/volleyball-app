@@ -4,7 +4,7 @@
 
 body {
 	background-color: rgb(54, 54, 54);
-  color: white;
+	color: white;
 }
 
 ::-webkit-scrollbar {
@@ -12,22 +12,24 @@ body {
 }
 
 .nav-link {
-  color: white;
+	color: white;
 }
 
 .nav-link:hover {
-  color: rgb(185, 185, 185);
+	color: rgb(185, 185, 185);
 }
 
-.nav-pills .nav-link.active, 
-.nav-pills .show>.nav-link {
-  background-color: #d5b500;
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+	background-color: #d5b500;
 }
 
 .score-boxes {
 	display: flex;
-	flex-direction: column; /* Stack on small screens */
+	/* flex-direction: column;  Stack on small screens */
+  flex-direction: row;
 	width: 100%;
+  justify-content: center;
 
 	@media screen and (min-width: 600px) {
 		flex-direction: row; /* Side-by-side on larger screens */
@@ -42,8 +44,8 @@ body {
 	justify-content: center;
 	gap: 15px;
 	text-align: center;
-	min-width: 200px;
-	min-height: 200px;
+	min-width: 260px;
+	min-height: 260px;
 	width: 100%; /* Full width on small screens */
 
 	@media screen and (min-width: 600px) {
@@ -63,19 +65,19 @@ body {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 100px;
-	height: 100px;
+	width: 130px;
+	height: 130px;
 	background-color: #666464;
 	border-radius: 50%;
 }
 
 .score-box-inner span {
-	font-size: 36px;
+	font-size: 48px;
 	font-weight: bold;
 }
 
 .score-arrow {
-	font-size: 32px;
+	font-size: 40px;
 	cursor: pointer;
 	color: #333;
 	transition: color 0.2s ease-in-out;
@@ -83,6 +85,57 @@ body {
 
 .score-arrow:hover {
 	color: #555;
+}
+
+/* Compact scoreboard variant for Court tab */
+.court-scoreboard {
+	z-index: 2;
+	right: 0.5rem;
+	top: -1.5rem; /* Lift above the On Court heading */
+}
+.score-mini {
+	gap: 8px;
+}
+.score-mini .score-box {
+	min-width: auto;
+	min-height: auto;
+	width: auto;
+	padding: 6px 8px;
+	gap: 8px;
+	border-radius: 8px;
+}
+.score-mini .score-box.home {
+	background-color: rgba(255, 255, 0, 0.85);
+}
+.score-mini .score-box.away {
+	background-color: rgba(173, 216, 230, 0.85);
+}
+.score-mini .score-box-inner {
+	width: 64px;
+	height: 64px;
+}
+.score-mini .score-box-inner span {
+	font-size: 24px;
+}
+.score-mini .score-arrow {
+	font-size: 22px;
+	color: #111;
+}
+
+/* Ensure adequate spacing below the overlay so it doesn't collide on small screens */
+.container.py-3.position-relative {
+	padding-top: 3.25rem; /* create space below the overlay */
+}
+
+@media (min-width: 768px) {
+	.court-scoreboard {
+		top: -2.25rem;
+	}
+}
+@media (min-width: 1200px) {
+	.court-scoreboard {
+		top: -2.75rem;
+	}
 }
 
 .disabled {
@@ -95,55 +148,94 @@ body {
 	font-size: 0.9rem;
 	padding: 0.25rem;
 	display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    line-height: 1.2;
-    transition: background-color 0.3s ease; /* Smooth transition for color changes */
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	line-height: 1.2;
+	transition: background-color 0.3s ease; /* Smooth transition for color changes */
 }
 
 /* MODIFIED: Container for stats for better layout */
 .player-stats-container {
-    display: flex;
-    justify-content: space-evenly;
-    width: 100%;
-    margin: 4px 0;
+	display: flex;
+	justify-content: space-evenly;
+	width: 100%;
+	margin: 4px 0;
 }
 
-.point-count, .foul-count, .timer-count {
-    font-size: 0.8rem;
-    font-weight: bold;
+.point-count,
+.foul-count,
+.timer-count {
+	font-size: 0.8rem;
+	font-weight: bold;
 }
 
 .point-count {
-    color: black; 
+	color: black;
 }
 
 .foul-count {
-    color: black; 
+	color: black;
 }
 
 /* NEW: Style for the timer on the court spot */
 .timer-count {
-    font-size: 1rem;
-    color: #004a94;
+	font-size: 1rem;
+	color: #004a94;
 }
 
 /* Warning and danger styles for court spots */
 .court-spot.fouls-warning {
-    background-color: #f0ad4e !important; /* Bootstrap warning yellow */
-    color: white !important;
+	background-color: #f0ad4e !important; /* Bootstrap warning yellow */
+	color: white !important;
 }
 
 .court-spot.fouls-danger {
-    background-color: #d9534f !important; /* Bootstrap danger red */
-    color: white !important;
+	background-color: #d9534f !important; /* Bootstrap danger red */
+	color: white !important;
 }
 
 .modal {
-  color:rgb(54, 54, 54)
+	color: rgb(54, 54, 54);
 }
 
+/* Make form controls readable on dark theme */
+.form-control,
+.form-select {
+	color: #212529; /* Bootstrap body text color */
+	background-color: #ffffff;
+}
+
+/* Ensure label stacks above input so it's visible before focus */
+.form-floating > .form-control,
+.form-floating > .form-select {
+	position: relative;
+	z-index: 1;
+}
+.form-floating > label {
+	position: absolute;
+	z-index: 3;
+}
+
+/* Floating label: visible over white inputs before focus */
+.form-floating > label {
+	color: rgba(33, 37, 41, 0.75) !important;
+	opacity: 0.85 !important;
+	z-index: 2; /* keep label above input background */
+}
+
+/* Hide actual placeholder text to avoid clashing with label (Bootstrap default, enforced) */
+.form-floating .form-control::placeholder {
+	color: transparent !important;
+}
+
+/* Keep consistent appearance when filled (programmatic or typed) */
+.form-floating > .form-control.is-filled ~ label,
+.form-floating > .form-select.is-filled ~ label {
+	opacity: 0.65;
+	transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
+	color: rgba(33, 37, 41, 0.65);
+}
 
 @media screen and (min-width: 992px) {
 	.court-spot {
@@ -151,12 +243,13 @@ body {
 		font-size: 1.2rem; /* Adjusted for more text */
 		font-weight: bold;
 	}
-    .point-count, .foul-count {
-        font-size: 1rem;
-    }
-    .timer-count {
-        font-size: 1.4rem;
-    }
+	.point-count,
+	.foul-count {
+		font-size: 1rem;
+	}
+	.timer-count {
+		font-size: 1.4rem;
+	}
 }
 
 /* Net */
@@ -186,4 +279,11 @@ body {
 
 .player-info {
 	flex-grow: 1;
+}
+
+/* Ensure floating labels show when fields have values set programmatically */
+.form-floating > .form-control.is-filled ~ label,
+.form-floating > .form-select.is-filled ~ label {
+	opacity: 0.65;
+	transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
 }

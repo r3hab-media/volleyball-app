@@ -1,24 +1,73 @@
+(() => {
+	"use strict";
+
 // ===================== Game State ===================== //
 let isGameRunning = false;
 const GAME_STATE_KEY = "volleyballGameRunning";
+const SCORE_STORAGE_KEY = "scoreTracking";
 
-const savedState = localStorage.getItem(GAME_STATE_KEY);
-if (savedState) isGameRunning = JSON.parse(savedState);
+let savedState = null;
+try {
+	savedState = localStorage.getItem(GAME_STATE_KEY);
+	if (savedState) {
+		isGameRunning = JSON.parse(savedState);
+	}
+} catch (error) {
+	console.error("Failed to restore game state from storage.", error);
+}
 
 // ===================== Player Data ===================== //
-const players = [
-	{ name: "Allison", number: 1 },
-	{ name: "Amylia", number: 2 },
-	{ name: "Kaylee", number: 3 },
-	{ name: "Mikayla", number: 4 },
-	{ name: "Marin", number: 5 },
-	{ name: "Avery", number: 6 },
-	{ name: "Jissel", number: 7 },
-	{ name: "Brielle", number: 8 },
-	{ name: "Kaelie", number: 9 },
-	{ name: "Natassja", number: 10 },
-	{ name: "Sadarrah", number: 11 },
+const PLAYERS_LIST_KEY = "volleyballPlayersList";
+const GAME_ROSTER_KEY = "volleyballGameRoster"; // stores array of player ids checked for this game
+
+const defaultPlayers = [
+	{ id: "p1", name: "Allison", number: 1 },
+	{ id: "p2", name: "Amylia", number: 2 },
+	{ id: "p3", name: "Mikayla", number: 3 },
+	{ id: "p4", name: "Marin", number: 4 },
+	{ id: "p5", name: "Jissel", number: 5 },
+	{ id: "p6", name: "Lea", number: 6 },
+	{ id: "p7", name: "Cecily", number: 7 },
+	{ id: "p8", name: "Harper", number: 8 },
+	{ id: "p9", name: "Natassja", number: 9 },
 ];
+
+function loadPlayers() {
+	try {
+		const stored = JSON.parse(localStorage.getItem(PLAYERS_LIST_KEY));
+		if (Array.isArray(stored) && stored.length) {
+			return stored.map((p, i) => ({ id: p.id || `pid_${i}_${p.name}`, name: p.name, number: Number(p.number) || i + 1 }));
+		}
+	} catch (error) {
+		console.error("Failed to load players list.", error);
+	}
+	return [...defaultPlayers];
+}
+function savePlayers(list) {
+	try {
+		localStorage.setItem(PLAYERS_LIST_KEY, JSON.stringify(list));
+	} catch (error) {
+		console.error("Failed to persist players list.", error);
+	}
+}
+function loadRosterSet() {
+	try {
+		const arr = JSON.parse(localStorage.getItem(GAME_ROSTER_KEY));
+		if (Array.isArray(arr)) return new Set(arr);
+	} catch (error) {
+		console.error("Failed to load roster selection.", error);
+	}
+	return new Set();
+}
+function saveRosterSet(set) {
+	try {
+		localStorage.setItem(GAME_ROSTER_KEY, JSON.stringify(Array.from(set)));
+	} catch (error) {
+		console.error("Failed to persist roster selection.", error);
+	}
+}
+
+let players = loadPlayers();
 
 const PLAYTIME_KEY = "volleyballPlaytimes";
 const MAX_FOULS = 5;
@@ -30,9 +79,17 @@ let playerStats = players.reduce((acc, player, i) => {
 	return acc;
 }, {});
 
-const savedStats = localStorage.getItem(PLAYTIME_KEY);
-if (savedStats) {
-	const parsedStats = JSON.parse(savedStats);
+let savedStatsRaw = null;
+let parsedStats = null;
+try {
+	savedStatsRaw = localStorage.getItem(PLAYTIME_KEY);
+	if (savedStatsRaw) {
+		parsedStats = JSON.parse(savedStatsRaw);
+	}
+} catch (error) {
+	console.error("Failed to restore playtime data from storage.", error);
+}
+if (parsedStats) {
 	players.forEach((player, i) => {
 		playerStats[i] = {
 			...{ totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 },
@@ -54,9 +111,14 @@ if (savedStats) {
 }
 
 const COURT_POSITIONS_KEY = "volleyballCourtPositions";
-const savedCourt = localStorage.getItem(COURT_POSITIONS_KEY);
-if (savedCourt) {
-	courtPositions = JSON.parse(savedCourt);
+let savedCourt = null;
+try {
+	savedCourt = localStorage.getItem(COURT_POSITIONS_KEY);
+	if (savedCourt) {
+		courtPositions = JSON.parse(savedCourt);
+	}
+} catch (error) {
+	console.error("Failed to restore court positions from storage.", error);
 }
 
 // ===================== Core Game Logic Functions ===================== //
@@ -78,7 +140,11 @@ function stopPlayerTimer(playerIndex) {
 }
 
 function savePlaytimeToStorage() {
-	localStorage.setItem(PLAYTIME_KEY, JSON.stringify(playerStats));
+	try {
+		localStorage.setItem(PLAYTIME_KEY, JSON.stringify(playerStats));
+	} catch (error) {
+		console.error("Failed to persist playtime data.", error);
+	}
 }
 
 function addFoul(playerIndex) {
@@ -109,16 +175,12 @@ function addPoint(playerIndex) {
 	}
 	playerStats[playerIndex].points++;
 
+	// Determine which team to credit and use centralized Score manager
 	const homeAway = document.getElementById("matchHomeAway").value;
 	const teamToScore = homeAway === "Home" || homeAway === "Away" ? homeAway.toLowerCase() : "home";
-	const scoreEl = document.getElementById(`score${teamToScore.charAt(0).toUpperCase() + teamToScore.slice(1)}Actual`);
-	let currentScore = parseInt(scoreEl.textContent, 10);
-	currentScore++;
-	scoreEl.textContent = currentScore;
-
-	const awayScore = teamToScore === "home" ? document.getElementById("scoreAwayActual").textContent : scoreEl.textContent;
-	const homeScore = teamToScore === "away" ? document.getElementById("scoreHomeActual").textContent : scoreEl.textContent;
-	localStorage.setItem("scoreTracking", JSON.stringify({ home: homeScore, away: awayScore }));
+	if (typeof Score !== "undefined") {
+		Score.increment(teamToScore);
+	}
 
 	savePlaytimeToStorage();
 	updateAllUI();
@@ -131,6 +193,7 @@ function updateAllUI() {
 	updateCourtGrid();
 	updatePlaytimeList();
 	updateBenchList();
+	updateOutTodayList();
 }
 
 // MODIFIED: updateCourtGrid now calculates and displays playtime.
@@ -218,9 +281,10 @@ function updateBenchList() {
 	const benchList = document.getElementById("benchList");
 	if (!benchList) return;
 	benchList.innerHTML = "";
+	const roster = loadRosterSet();
 
 	players.forEach((player, i) => {
-		if (!courtPositions.includes(i)) {
+		if (!courtPositions.includes(i) && (roster.size === 0 || roster.has(player.id))) {
 			let seconds = playerStats[i].totalSeconds;
 			const mins = Math.floor(seconds / 60);
 			const secs = seconds % 60;
@@ -235,6 +299,26 @@ function updateBenchList() {
 				</div>
 			`;
 			benchList.appendChild(item);
+		}
+	});
+}
+
+function updateOutTodayList() {
+	const outList = document.getElementById("outTodayList");
+	if (!outList) return;
+	outList.innerHTML = "";
+	const roster = loadRosterSet();
+	// Show players not checked in roster
+	players.forEach((player) => {
+		if (roster.size > 0 && !roster.has(player.id)) {
+			const item = document.createElement("li");
+			item.className = "list-group-item d-flex justify-content-between align-items-center";
+			item.innerHTML = `
+				<div class="player-info">
+					<strong>#${player.number} ${player.name}</strong>
+				</div>
+			`;
+			outList.appendChild(item);
 		}
 	});
 }
@@ -256,221 +340,749 @@ function rotateCourtClockwise() {
 	courtPositions[0] = prev[3];
 	courtPositions.forEach((index) => startPlayerTimer(index));
 
-	localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
+	try {
+		localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
+	} catch (error) {
+		console.error("Failed to persist rotated court positions.", error);
+	}
 	updateAllUI();
 	savePlaytimeToStorage();
 	showAlert("Players Rotated!", "info");
 }
 
-function resetGame() {
-	showConfirmModal("Are you sure you want to reset everything? This will clear all scores, play times, and fouls.", () => {
+// Internal utility to fully reset game state; when suppressAlert is true, no alert is shown
+function performFullReset(suppressAlert = false) {
+	try {
 		courtPositions.forEach((playerIndex) => stopPlayerTimer(playerIndex));
 
-		let scores = { home: 0, away: 0 };
-		localStorage.removeItem("scoreTracking");
-		document.getElementById("scoreHomeActual").textContent = "0";
-		document.getElementById("scoreAwayActual").textContent = "0";
-		document.getElementById("homeScore").value = "";
-		document.getElementById("awayScore").value = "";
+		// Reset scores via centralized manager to clear in-memory and storage state
+		if (typeof Score !== "undefined") {
+			Score.reset();
+		} else {
+			localStorage.removeItem(SCORE_STORAGE_KEY);
+			const h = document.getElementById("scoreHomeActual");
+			const a = document.getElementById("scoreAwayActual");
+			const hi = document.getElementById("homeScore");
+			const ai = document.getElementById("awayScore");
+			if (h) h.textContent = "0";
+			if (a) a.textContent = "0";
+			if (hi) hi.value = "";
+			if (ai) ai.value = "";
+		}
 
 		isGameRunning = false;
 		localStorage.removeItem(GAME_STATE_KEY);
-		document.getElementById("startGameBtn").disabled = false;
+		const startBtn = document.getElementById("startGameBtn");
+		if (startBtn) startBtn.disabled = false;
 
 		courtPositions = Array(6).fill(null);
 		localStorage.removeItem(COURT_POSITIONS_KEY);
 		players.forEach((_, i) => (playerStats[i] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 }));
 		localStorage.removeItem(PLAYTIME_KEY);
 
-		updateAllUI();
-		showAlert("Game has been reset!", "warning");
-	});
-}
-
-// ===================== Modals and Alerts ===================== //
-function showAlert(message, type) {
-	const alertContainer = document.getElementById("alertContainer");
-	const alertDiv = document.createElement("div");
-	alertDiv.className = `alert alert-${type} alert-dismissible fade show text-center`;
-	alertDiv.setAttribute("role", "alert");
-	alertDiv.innerHTML = `
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
-	alertContainer.appendChild(alertDiv);
-	setTimeout(() => bootstrap.Alert.getOrCreateInstance(alertDiv).close(), 3000);
-}
-
-function showConfirmModal(body, callback) {
-	const confirmModalBody = document.getElementById("confirmModalBody");
-	const confirmModalBtn = document.getElementById("confirmModalBtn");
-	const confirmModal = new bootstrap.Modal(document.getElementById("confirmModal"));
-
-	confirmModalBody.textContent = body;
-
-	const newConfirmBtn = confirmModalBtn.cloneNode(true);
-	confirmModalBtn.parentNode.replaceChild(newConfirmBtn, confirmModalBtn);
-
-	newConfirmBtn.addEventListener("click", () => {
-		callback();
-		confirmModal.hide();
-	});
-
-	confirmModal.show();
-}
-
-function showPlayerPicker() {
-	const playerList = document.getElementById("playerList");
-	const playerModal = new bootstrap.Modal(document.getElementById("playerModal"));
-	playerList.innerHTML = "";
-
-	players.forEach((player, index) => {
-		const isAlreadyOnCourt = courtPositions.includes(index);
-		const playerButton = document.createElement("button");
-		playerButton.className = "btn btn-outline-primary w-100 my-1";
-		playerButton.textContent = `#${player.number} ${player.name}`;
-		playerButton.disabled = isAlreadyOnCourt;
-
-		playerButton.addEventListener("click", () => {
-			const prevPlayerIndex = courtPositions[selectedSpot];
-			if (prevPlayerIndex !== null) stopPlayerTimer(prevPlayerIndex);
-
-			courtPositions[selectedSpot] = index;
-			startPlayerTimer(index);
-
-			localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
-			savePlaytimeToStorage();
-			updateAllUI();
-			playerModal.hide();
-		});
-		playerList.appendChild(playerButton);
-	});
-	playerModal.show();
-}
-
-function showCourtActionModal() {
-	const playerIndex = courtPositions[selectedSpot];
-	const player = players[playerIndex];
-	const modal = new bootstrap.Modal(document.getElementById("courtActionModal"));
-	document.getElementById("courtActionModalLabel").textContent = `Action for ${player.name}`;
-
-	const addPointBtn = document.getElementById("modalAddPointBtn");
-	const addFoulBtn = document.getElementById("modalAddFoulBtn");
-	const subPlayerBtn = document.getElementById("modalSubPlayerBtn");
-
-	addPointBtn.onclick = () => {
-		addPoint(playerIndex);
-		modal.hide();
-	};
-
-	addFoulBtn.onclick = () => {
-		addFoul(playerIndex);
-		modal.hide();
-	};
-
-	subPlayerBtn.onclick = () => {
-		modal.hide();
-		setTimeout(showPlayerPicker, 200);
-	};
-
-	modal.show();
-}
-
-// ===================== DOM Initialization ===================== //
-document.addEventListener("DOMContentLoaded", () => {
-	const initMatchDetails = () => {
-		const inputs = document.querySelectorAll("#matchID, #matchDate, #matchHomeAway, #matchType, #matchLocation, #opposingTeam");
-		const savedDetails = localStorage.getItem("matchDetails");
-		if (savedDetails) {
-			const matchDetails = JSON.parse(savedDetails);
-			inputs.forEach((input) => {
-				if (matchDetails[input.id]) input.value = matchDetails[input.id];
-			});
+		// Clear roster selections (uncheck everyone)
+		try {
+			localStorage.removeItem(GAME_ROSTER_KEY);
+			if (window.__renderRoster && typeof window.__renderRoster === "function") {
+				window.__renderRoster();
+			}
+		} catch (error) {
+			console.error("Failed to clear roster selection from storage.", error);
 		}
-		inputs.forEach((input) =>
-			input.addEventListener("blur", () => {
-				const matchDetails = {};
-				inputs.forEach((i) => (matchDetails[i.id] = i.value));
-				localStorage.setItem("matchDetails", JSON.stringify(matchDetails));
-			})
-		);
-	};
-	initMatchDetails();
 
-	(() => {
-		const STORAGE_KEY = "scoreTracking";
-		let scores = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { home: 0, away: 0 };
-		const scoreHomeEl = document.getElementById("scoreHomeActual");
-		const scoreAwayEl = document.getElementById("scoreAwayActual");
-		const updateScoreUI = () => {
-			scoreHomeEl.textContent = scores.home;
-			scoreAwayEl.textContent = scores.away;
-		};
+		// Clear match details (inputs and storage)
+		try {
+			const ids = ["matchDate", "matchHomeAway", "matchType", "matchLocation", "opposingTeam"];
+			ids.forEach((id) => {
+				const el = document.getElementById(id);
+				if (!el) return;
+				if (el.tagName === "SELECT") {
+					// Try to set the disabled placeholder option if present
+					let set = false;
+					for (let i = 0; i < el.options.length; i++) {
+						if (el.options[i].disabled) {
+							el.selectedIndex = i;
+							set = true;
+							break;
+						}
+					}
+					if (!set) {
+						el.selectedIndex = 0;
+					}
+				} else {
+					el.value = "";
+				}
+				// remove filled class for floating labels
+				el.classList && el.classList.remove("is-filled");
+			});
+			localStorage.removeItem("matchDetails");
+			if (window.__syncFloatingLabels && typeof window.__syncFloatingLabels === "function") window.__syncFloatingLabels();
+		} catch (error) {
+			console.error("Failed to clear match details from storage.", error);
+		}
+
+		updateAllUI();
+		if (!suppressAlert) showAlert("Game has been reset!", "warning");
+	} catch (e) {
+		// Fallback safety to avoid leaving the app in a broken state
+		console.error("Failed to fully reset game:", e);
+		if (!suppressAlert) showAlert("Failed to reset game.", "danger");
+	}
+}
+
+function resetGame() {
+	showConfirmModal("Are you sure you want to reset everything? This will clear all scores, play times, and fouls.", () => {
+		performFullReset(false);
+	});
+}
+
+// ===================== Score Manager ===================== //
+// Centralized controller to keep UI, memory, and storage in sync
+const Score = (() => {
+	let scores = { home: 0, away: 0 };
+
+	const load = () => {
+		try {
+			const fromStorage = JSON.parse(localStorage.getItem(SCORE_STORAGE_KEY));
+			if (fromStorage && typeof fromStorage.home !== "undefined" && typeof fromStorage.away !== "undefined") {
+				// Ensure numbers
+				scores = { home: Number(fromStorage.home) || 0, away: Number(fromStorage.away) || 0 };
+			}
+		} catch (error) {
+			console.error("Failed to load score data from storage.", error);
+			scores = { home: 0, away: 0 };
+		}
+	};
+
+	const save = () => {
+		try {
+			localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(scores));
+		} catch (error) {
+			console.error("Failed to persist score data.", error);
+		}
+	};
+	const updateUI = () => {
+		// Update classic single-scoreboard IDs if present
+		const idHome = document.getElementById("scoreHomeActual");
+		const idAway = document.getElementById("scoreAwayActual");
+		if (idHome) idHome.textContent = String(scores.home);
+		if (idAway) idAway.textContent = String(scores.away);
+
+		// Update any replicated score displays on the page (Court tab, etc.)
+		document.querySelectorAll('.score-actual[data-team="home"]').forEach((el) => {
+			el.textContent = String(scores.home);
+		});
+		document.querySelectorAll('.score-actual[data-team="away"]').forEach((el) => {
+			el.textContent = String(scores.away);
+		});
+	};
+
+	const increment = (team) => {
+		if (!(team === "home" || team === "away")) return;
+		scores[team] += 1;
+		save();
+		updateUI();
+	};
+	const decrement = (team) => {
+		if (!(team === "home" || team === "away")) return;
+		scores[team] = Math.max(0, scores[team] - 1);
+		save();
+		updateUI();
+	};
+	const reset = () => {
+		scores = { home: 0, away: 0 };
+		save();
+		updateUI();
+		// Clear final score inputs
+		const homeInput = document.getElementById("homeScore");
+		const awayInput = document.getElementById("awayScore");
+		if (homeInput) homeInput.value = "";
+		if (awayInput) awayInput.value = "";
+	};
+
+	const init = () => {
+		load();
+		updateUI();
+
+		// Wire arrows
 		document.querySelectorAll(".score-arrow.up").forEach((btn) =>
 			btn.addEventListener("click", (e) => {
-				scores[e.target.dataset.team]++;
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
-				updateScoreUI();
+				// Block scoring until 6 players are on court
+				if (courtPositions.filter((p) => p !== null).length < 6) {
+					showAlert("Please select 6 players for the court before starting.", "warning");
+					return;
+				}
+				const team = (e.currentTarget || e.target).dataset.team;
+				increment(team);
 			})
 		);
 		document.querySelectorAll(".score-arrow.down").forEach((btn) =>
 			btn.addEventListener("click", (e) => {
-				if (scores[e.target.dataset.team] > 0) {
-					scores[e.target.dataset.team]--;
-					localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
-					updateScoreUI();
+				// Block scoring until 6 players are on court
+				if (courtPositions.filter((p) => p !== null).length < 6) {
+					showAlert("Please select 6 players for the court before starting.", "warning");
+					return;
 				}
+				const team = (e.currentTarget || e.target).dataset.team;
+				decrement(team);
 			})
 		);
-		document.getElementById("finalScore").addEventListener("click", () => {
-			document.getElementById("homeScore").value = scores.home;
-			document.getElementById("awayScore").value = scores.away;
-			showAlert("Final Score Saved!", "success");
-		});
-		updateScoreUI();
-	})();
 
-	document.getElementById("startGameBtn").addEventListener("click", () => {
-		if (isGameRunning) return;
-		if (courtPositions.filter((p) => p !== null).length < 6) {
-			showAlert("Please select 6 players for the court before starting.", "warning");
+		// Final Score button
+		const finalBtn = document.getElementById("finalScore");
+		if (finalBtn) {
+			finalBtn.addEventListener("click", () => {
+				const homeInput = document.getElementById("homeScore");
+				const awayInput = document.getElementById("awayScore");
+				if (homeInput) homeInput.value = String(scores.home);
+				if (awayInput) awayInput.value = String(scores.away);
+				showAlert("Final Score Saved!", "success");
+				// Also reset everything after saving the final score (Score tab flow)
+				performFullReset(true);
+			});
+		}
+
+		// Court tab Final Score button (with confirmation and PDF generation)
+		const finalCourtBtn = document.getElementById("finalScoreCourtBtn");
+		if (finalCourtBtn) {
+			finalCourtBtn.addEventListener("click", () => {
+				// Block until 6 players are on court
+				if (courtPositions.filter((p) => p !== null).length < 6) {
+					showAlert("Please select 6 players for the court before starting.", "warning");
+					return;
+				}
+				showConfirmModal("Are you sure you want to end the game?", () => {
+					// Save final score to inputs like original behavior
+					const homeInput = document.getElementById("homeScore");
+					const awayInput = document.getElementById("awayScore");
+					if (homeInput) homeInput.value = String(scores.home);
+					if (awayInput) awayInput.value = String(scores.away);
+
+					// Generate PDF summary
+					const generatePdf = () => {
+						const { jsPDF } = window.jspdf || {};
+						if (!jsPDF) {
+							showAlert("PDF library not loaded.", "danger");
+							return;
+						}
+						const doc = new jsPDF();
+
+						// Gather match details
+						const matchDetails = {
+							date: document.getElementById("matchDate")?.value || "",
+							homeAway: document.getElementById("matchHomeAway")?.value || "",
+							location: document.getElementById("matchLocation")?.value || "",
+							type: document.getElementById("matchType")?.value || "",
+							opponent: document.getElementById("opposingTeam")?.value || "",
+							score: { home: scores.home, away: scores.away },
+						};
+
+						// Determine who played (roster-checked or anyone set on court/bench)
+						const roster = loadRosterSet();
+						const playedIndexes = new Set();
+						courtPositions.forEach((idx) => {
+							if (idx !== null) playedIndexes.add(idx);
+						});
+						// Include bench players from roster
+						players.forEach((p, idx) => {
+							if (roster.size === 0 || roster.has(p.id)) playedIndexes.add(idx);
+						});
+
+						// Title with matchup and bold styling
+						const opponentName = matchDetails.opponent || "Opponent";
+						doc.setFont("helvetica", "bold");
+						doc.setFontSize(16);
+						doc.text(`Volleyball Match Summary (Flames vs ${opponentName})`, 14, 16);
+						// Details
+						doc.setFont("helvetica", "normal");
+						doc.setFontSize(11);
+						let y = 26;
+						// Format date as MMM D, YYYY if possible
+						let formattedDate = matchDetails.date;
+						try {
+							const d = matchDetails.date ? new Date(matchDetails.date) : null;
+							if (d && !isNaN(d.getTime())) {
+								formattedDate = d.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric" });
+							}
+						} catch (e) {}
+						// Helper to draw bold label and normal value on one line
+						const drawLabelValue = (label, value, x, y) => {
+							doc.setFont("helvetica", "bold");
+							doc.text(label, x, y);
+							const lw = doc.getTextWidth(label);
+							doc.setFont("helvetica", "normal");
+							doc.text(String(value || ""), x + lw + 2, y);
+						};
+						drawLabelValue("Date: ", formattedDate, 14, y);
+						y += 6;
+						drawLabelValue("Home/Away: ", matchDetails.homeAway, 14, y);
+						y += 6;
+						drawLabelValue("Location: ", matchDetails.location, 14, y);
+						y += 6;
+						drawLabelValue("Match Type: ", matchDetails.type, 14, y);
+						y += 6;
+						drawLabelValue("Opponent: ", matchDetails.opponent, 14, y);
+						y += 8;
+
+						// Final Score label bold + value normal
+						doc.setFontSize(13);
+						doc.setFont("helvetica", "bold");
+						const fsLabel = "Final Score: ";
+						doc.text(fsLabel, 14, y);
+						const fsLabelW = doc.getTextWidth(fsLabel);
+						doc.setFont("helvetica", "normal");
+						doc.text(`Home ${scores.home} - Away ${scores.away}`, 14 + fsLabelW + 2, y);
+						y += 10;
+
+						// Players heading
+						doc.setFontSize(12);
+						doc.setFont("helvetica", "bold");
+						doc.text("Players", 14, y);
+						y += 6;
+						// Column headers bold
+						doc.setFont("helvetica", "bold");
+						doc.setFontSize(10);
+						doc.text("#", 14, y);
+						doc.text("Name", 22, y);
+						doc.text("Time", 90, y);
+						doc.text("Pts", 120, y);
+						doc.text("Fouls", 140, y);
+						y += 4;
+						doc.setFont("helvetica", "normal");
+
+						const addPlayerRow = (idx) => {
+							const p = players[idx];
+							if (!p) return;
+							let seconds = playerStats[idx]?.totalSeconds || 0;
+							if (playerStats[idx]?.isOnCourt && playerStats[idx]?.lastStartTime) {
+								seconds += Math.floor((Date.now() - playerStats[idx].lastStartTime) / 1000);
+							}
+							const mins = Math.floor(seconds / 60);
+							const secs = seconds % 60;
+							const timeStr = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+							const pts = playerStats[idx]?.points ?? 0;
+							const fouls = playerStats[idx]?.fouls ?? 0;
+
+							doc.text(String(p.number), 14, y);
+							doc.text(p.name, 22, y);
+							doc.text(timeStr, 90, y);
+							doc.text(String(pts), 120, y);
+							doc.text(String(fouls), 140, y);
+							y += 6;
+							if (y > 280) {
+								doc.addPage();
+								y = 20;
+							}
+						};
+
+						Array.from(playedIndexes)
+							.sort((a, b) => players[a].number - players[b].number)
+							.forEach(addPlayerRow);
+
+						doc.save(`volleyball_match_${Date.now()}.pdf`);
+						showAlert("Final Score Saved and PDF generated.", "success");
+						// After PDF is saved/downloaded, reset the entire game state
+						performFullReset(true);
+					};
+
+					try {
+						// If jsPDF isn't loaded (slow network), load it on-demand and then generate
+						if (!(window.jspdf && window.jspdf.jsPDF)) {
+							const script = document.createElement("script");
+							script.src = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+							script.onload = generatePdf;
+							script.onerror = () => showAlert("Failed to load PDF library.", "danger");
+							document.head.appendChild(script);
+						} else {
+							generatePdf();
+						}
+					} catch (err) {
+						console.error(err);
+						showAlert("Failed to generate PDF.", "danger");
+					}
+				});
+			});
+		}
+	};
+
+	return {
+		init,
+		increment,
+		decrement,
+		reset,
+		get scores() {
+			return { ...scores };
+		},
+	};
+})();
+
+// ===================== Modals and Alerts ===================== //
+// Track last alert to avoid intrusive stacking
+let __lastAlert = { message: null, at: 0, timeoutId: null };
+function showAlert(message, type) {
+	try {
+		const alertContainer = document.getElementById("alertContainer");
+		if (!alertContainer) {
+			console.warn("Alert container not found in the DOM.");
 			return;
 		}
-		isGameRunning = true;
-		localStorage.setItem(GAME_STATE_KEY, JSON.stringify(true));
-		courtPositions.forEach(startPlayerTimer);
-		showAlert("Game Started!", "success");
-		document.getElementById("startGameBtn").disabled = true;
-	});
-	if (isGameRunning) document.getElementById("startGameBtn").disabled = true;
+		const now = Date.now();
+		// Throttle identical alerts fired rapidly
+		if (__lastAlert.message === message && now - __lastAlert.at < 1200) {
+			return;
+		}
+		__lastAlert.message = message;
+		__lastAlert.at = now;
 
-	document.getElementById("rotateBtn").addEventListener("click", rotateCourtClockwise);
-	document.getElementById("resetScore").addEventListener("click", resetGame);
+		// Ensure only one alert is visible at a time
+		alertContainer.innerHTML = "";
 
-	document.getElementById("courtGrid").addEventListener("click", (e) => {
-		const spotButton = e.target.closest(".court-spot");
-		if (!spotButton) return;
+		const alertDiv = document.createElement("div");
+		alertDiv.className = `alert alert-${type} alert-dismissible fade show text-center`;
+		alertDiv.setAttribute("role", "alert");
+		alertDiv.innerHTML = `
+	${message}
+	<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+		alertContainer.appendChild(alertDiv);
 
-		selectedSpot = parseInt(spotButton.dataset.spot);
+		if (__lastAlert.timeoutId) {
+			clearTimeout(__lastAlert.timeoutId);
+		}
+		__lastAlert.timeoutId = setTimeout(() => {
+			try {
+				bootstrap.Alert.getOrCreateInstance(alertDiv).close();
+			} catch (dismissError) {
+				// no-op
+			}
+		}, 3000);
+	} catch (error) {
+		console.error("Failed to display alert message.", error);
+	}
+}
+
+function showConfirmModal(body, callback) {
+	try {
+		const modalElement = document.getElementById("confirmModal");
+		const confirmModalBody = document.getElementById("confirmModalBody");
+		const confirmModalBtn = document.getElementById("confirmModalBtn");
+		if (!modalElement || !confirmModalBody || !confirmModalBtn) {
+			console.warn("Confirm modal elements are missing.");
+			return;
+		}
+		const confirmModal = new bootstrap.Modal(modalElement);
+
+		confirmModalBody.textContent = body;
+
+		const newConfirmBtn = confirmModalBtn.cloneNode(true);
+		confirmModalBtn.parentNode.replaceChild(newConfirmBtn, confirmModalBtn);
+
+		newConfirmBtn.addEventListener("click", () => {
+			try {
+				if (typeof callback === "function") {
+					callback();
+				}
+			} catch (error) {
+				console.error("Error executing confirmation callback.", error);
+			}
+			confirmModal.hide();
+		});
+
+		confirmModal.show();
+	} catch (error) {
+		console.error("Failed to show confirmation modal.", error);
+	}
+}
+
+function showPlayerPicker() {
+	try {
+		const playerList = document.getElementById("playerList");
+		const modalElement = document.getElementById("playerModal");
+		if (!playerList || !modalElement) {
+			console.warn("Player picker modal elements are missing.");
+			return;
+		}
+		const playerModal = new bootstrap.Modal(modalElement);
+		playerList.innerHTML = "";
+
+		const roster = loadRosterSet();
+		// Gate: require at least one player checked in roster before allowing selection
+		if (roster.size === 0) {
+			showAlert("First mark players present on the Players tab (Roster for this Game).", "warning");
+			return;
+		}
+		const eligibleIndexes = players.map((p, idx) => ({ p, idx })).filter(({ p }) => roster.has(p.id));
+
+		eligibleIndexes.forEach(({ p: player, idx: index }) => {
+			const isAlreadyOnCourt = courtPositions.includes(index);
+			const playerButton = document.createElement("button");
+			playerButton.className = "btn btn-outline-primary w-100 my-1";
+			playerButton.textContent = `#${player.number} ${player.name}`;
+			playerButton.disabled = isAlreadyOnCourt;
+
+			playerButton.addEventListener("click", () => {
+				const prevPlayerIndex = courtPositions[selectedSpot];
+				if (prevPlayerIndex !== null) stopPlayerTimer(prevPlayerIndex);
+
+				courtPositions[selectedSpot] = index;
+				startPlayerTimer(index);
+
+				try {
+					localStorage.setItem(COURT_POSITIONS_KEY, JSON.stringify(courtPositions));
+				} catch (error) {
+					console.error("Failed to persist updated court positions.", error);
+				}
+				savePlaytimeToStorage();
+				updateAllUI();
+				playerModal.hide();
+			});
+			playerList.appendChild(playerButton);
+		});
+		playerModal.show();
+	} catch (error) {
+		console.error("Failed to show player picker modal.", error);
+	}
+}
+
+function showCourtActionModal() {
+	try {
 		const playerIndex = courtPositions[selectedSpot];
-
-		if (playerIndex !== null) {
-			showCourtActionModal();
-		} else {
-			showPlayerPicker();
+		if (playerIndex === null || typeof playerIndex === "undefined") {
+			return;
 		}
-	});
+		const player = players[playerIndex];
+		if (!player) {
+			console.warn("No player found for selected spot.");
+			return;
+		}
+		const modalElement = document.getElementById("courtActionModal");
+		const modalTitle = document.getElementById("courtActionModalLabel");
+		const addPointBtn = document.getElementById("modalAddPointBtn");
+		const addFoulBtn = document.getElementById("modalAddFoulBtn");
+		const subPlayerBtn = document.getElementById("modalSubPlayerBtn");
+		if (!modalElement || !modalTitle || !addPointBtn || !addFoulBtn || !subPlayerBtn) {
+			console.warn("Court action modal elements are missing.");
+			return;
+		}
+		const modal = new bootstrap.Modal(modalElement);
+		modalTitle.textContent = `Action for ${player.name}`;
 
-	updateAllUI();
-	setInterval(() => {
-		if (isGameRunning) {
+		addPointBtn.onclick = () => {
+			addPoint(playerIndex);
+			modal.hide();
+		};
+
+		addFoulBtn.onclick = () => {
+			addFoul(playerIndex);
+			modal.hide();
+		};
+
+		subPlayerBtn.onclick = () => {
+			modal.hide();
+			setTimeout(showPlayerPicker, 200);
+		};
+
+		modal.show();
+	} catch (error) {
+		console.error("Failed to show court action modal.", error);
+	}
+}
+
+// ===================== DOM Initialization ===================== //
+document.addEventListener("DOMContentLoaded", () => {
+	try {
+			const initMatchDetails = () => {
+				const inputs = document.querySelectorAll("#matchDate, #matchHomeAway, #matchType, #matchLocation, #opposingTeam");
+				let savedDetailsRaw = null;
+				try {
+					savedDetailsRaw = localStorage.getItem("matchDetails");
+				} catch (error) {
+					console.error("Failed to read saved match details.", error);
+				}
+				if (savedDetailsRaw) {
+					try {
+						const matchDetails = JSON.parse(savedDetailsRaw);
+						inputs.forEach((input) => {
+							if (matchDetails[input.id]) input.value = matchDetails[input.id];
+						});
+					} catch (error) {
+						console.error("Failed to parse saved match details.", error);
+					}
+				}
+				inputs.forEach((input) =>
+					input.addEventListener("blur", () => {
+						const matchDetails = {};
+						inputs.forEach((i) => (matchDetails[i.id] = i.value));
+						try {
+							localStorage.setItem("matchDetails", JSON.stringify(matchDetails));
+						} catch (error) {
+							console.error("Failed to persist match details.", error);
+						}
+					})
+				);
+			};
+			initMatchDetails();
+
+			// Ensure floating labels reflect programmatic values (e.g., date/select)
+			const toggleFilledClass = (el) => {
+				const hasValue = !!(el && el.value && String(el.value).trim().length > 0);
+				if (hasValue) {
+					el.classList.add("is-filled");
+				} else {
+					el.classList.remove("is-filled");
+				}
+			};
+			const syncFloatingLabels = () => {
+				document.querySelectorAll(".form-floating .form-control, .form-floating .form-select").forEach((el) => toggleFilledClass(el));
+			};
+			// Expose to window for cross-scope reset logic
+			window.__syncFloatingLabels = syncFloatingLabels;
+			// Run at startup and on interactions that can change value
+			syncFloatingLabels();
+			document.addEventListener("input", (e) => {
+				if (e.target && (e.target.classList.contains("form-control") || e.target.classList.contains("form-select"))) {
+					toggleFilledClass(e.target);
+				}
+			});
+			document.addEventListener("change", (e) => {
+				if (e.target && (e.target.classList.contains("form-control") || e.target.classList.contains("form-select"))) {
+					toggleFilledClass(e.target);
+				}
+			});
+
+			// Initialize score manager
+			Score.init();
+
+			// ===== Players Tab: Roster Management ===== //
+			const rosterContainer = document.getElementById("rosterList");
+			const addPlayerBtn = document.getElementById("addPlayerBtn");
+			const newPlayerInput = document.getElementById("newPlayerName");
+
+			function nextPlayerNumber() {
+				const used = new Set(players.map((p) => Number(p.number)));
+				let n = 1;
+				while (used.has(n)) n++;
+				return n;
+			}
+
+			function renderRoster() {
+				if (!rosterContainer) return;
+				const roster = loadRosterSet();
+				rosterContainer.innerHTML = "";
+				players.forEach((p, idx) => {
+					const item = document.createElement("label");
+					item.className = "list-group-item d-flex align-items-center gap-2";
+					item.innerHTML = `
+						<input class="form-check-input me-2 roster-check" type="checkbox" data-player-id="${p.id}" ${roster.has(p.id) ? "checked" : ""}>
+						<span><strong>#${p.number}</strong> ${p.name}</span>
+					`;
+					rosterContainer.appendChild(item);
+				});
+				// wire checks
+				rosterContainer.querySelectorAll(".roster-check").forEach((cb) => {
+					cb.addEventListener("change", (e) => {
+						const set = loadRosterSet();
+						const id = e.target.dataset.playerId;
+						if (e.target.checked) set.add(id);
+						else set.delete(id);
+						saveRosterSet(set);
+						updateBenchList();
+						updateOutTodayList();
+					});
+				});
+			}
+			// Expose to window so reset helper can trigger a re-render
+			window.__renderRoster = renderRoster;
+
+			function addNewPlayer(name) {
+				const trimmed = (name || "").trim();
+				if (!trimmed) return;
+				const id = `pid_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+				const player = { id, name: trimmed, number: nextPlayerNumber() };
+				players.push(player);
+				// ensure stats entry
+				playerStats[players.length - 1] = { totalSeconds: 0, isOnCourt: false, lastStartTime: null, fouls: 0, points: 0 };
+				savePlayers(players);
+				renderRoster();
+				updateAllUI();
+				updateOutTodayList();
+			}
+
+			if (addPlayerBtn && newPlayerInput) {
+				addPlayerBtn.addEventListener("click", () => {
+					addNewPlayer(newPlayerInput.value);
+					newPlayerInput.value = "";
+				});
+				newPlayerInput.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") {
+						addNewPlayer(newPlayerInput.value);
+						newPlayerInput.value = "";
+					}
+				});
+			}
+
+			renderRoster();
+
+			document.getElementById("startGameBtn").addEventListener("click", () => {
+				if (isGameRunning) return;
+				if (courtPositions.filter((p) => p !== null).length < 6) {
+					showAlert("Please select 6 players for the court before starting.", "warning");
+					return;
+				}
+				isGameRunning = true;
+				try {
+					localStorage.setItem(GAME_STATE_KEY, JSON.stringify(true));
+				} catch (error) {
+					console.error("Failed to persist game state flag.", error);
+				}
+				courtPositions.forEach(startPlayerTimer);
+				showAlert("Game Started!", "success");
+				document.getElementById("startGameBtn").disabled = true;
+			});
+			if (isGameRunning) document.getElementById("startGameBtn").disabled = true;
+
+			document.getElementById("rotateBtn").addEventListener("click", rotateCourtClockwise);
+			document.getElementById("resetScore").addEventListener("click", resetGame);
+
+			document.getElementById("courtGrid").addEventListener("click", (e) => {
+				const spotButton = e.target.closest(".court-spot");
+				if (!spotButton) return;
+
+				selectedSpot = parseInt(spotButton.dataset.spot);
+				const playerIndex = courtPositions[selectedSpot];
+
+				if (playerIndex !== null) {
+					showCourtActionModal();
+				} else {
+					const roster = loadRosterSet();
+					if (roster.size === 0) {
+						showAlert("First mark players present on the Players tab (Roster for this Game).", "warning");
+						return;
+					}
+					showPlayerPicker();
+				}
+			});
+
 			updateAllUI();
-		}
-	}, 1000);
+			setInterval(() => {
+				if (isGameRunning) {
+					updateAllUI();
+				}
+			}, 1000);
+	} catch (error) {
+		console.error("Failed to initialize the application.", error);
+		showAlert("Failed to initialize the application. Please refresh.", "danger");
+	}
 });
 
 if ("serviceWorker" in navigator) {
-	navigator.serviceWorker
-		.register("/service-worker.js")
-		.then(() => console.log("✅ Service Worker registered"))
-		.catch((err) => console.error("❌ Service Worker error:", err));
+	try {
+		navigator.serviceWorker
+			.register("/service-worker.js")
+			.then(() => console.log("Service Worker registered"))
+			.catch((err) => console.error("Service Worker error:", err));
+	} catch (error) {
+		console.error("Service Worker registration failed.", error);
+	}
 }
+
+})();
