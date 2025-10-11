@@ -47,6 +47,8 @@ body {
 	min-width: 260px;
 	min-height: 260px;
 	width: 100%; /* Full width on small screens */
+	position: relative;
+	padding-top: 2.25rem; /* create room for labels */
 
 	@media screen and (min-width: 600px) {
 		width: 50%; /* Ensures each box takes up exactly 50% of the screen */
@@ -76,6 +78,19 @@ body {
 	font-weight: bold;
 }
 
+.score-label {
+	position: absolute;
+	top: 0.75rem;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 0.9rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #111;
+	pointer-events: none;
+}
+
 .score-arrow {
 	font-size: 40px;
 	cursor: pointer;
@@ -100,7 +115,7 @@ body {
 	min-width: auto;
 	min-height: auto;
 	width: auto;
-	padding: 6px 8px;
+	padding: 1.75rem 8px 6px;
 	gap: 8px;
 	border-radius: 8px;
 }
@@ -120,6 +135,31 @@ body {
 .score-mini .score-arrow {
 	font-size: 22px;
 	color: #111;
+}
+.score-mini .score-label {
+	top: 0.35rem;
+	font-size: 0.7rem;
+}
+
+.game-timer-display {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.85rem;
+	border-radius: 999px;
+	background: rgba(12, 47, 104, 0.2);
+	color: #f4ebec;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+}
+.game-timer-display .label {
+	text-transform: uppercase;
+	font-size: 0.7rem;
+	opacity: 0.85;
+}
+.game-timer-display #gameTimerValue {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 1.05rem;
 }
 
 /* Ensure adequate spacing below the overlay so it doesn't collide on small screens */
@@ -144,23 +184,58 @@ body {
 }
 
 .court-spot {
-	height: 100px; /* Increased height to fit more info */
-	font-size: 0.9rem;
-	padding: 0.25rem;
+	font-size: 0.95rem;
+	padding: 0.5rem;
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
-	align-items: center;
+	gap: 0.5rem;
+	justify-content: stretch;
+	align-items: stretch;
 	line-height: 1.2;
-	transition: background-color 0.3s ease; /* Smooth transition for color changes */
+	border: 2px dashed rgba(244, 235, 236, 0.5);
+	border-radius: 0.75rem;
+	background-color: rgba(0, 0, 0, 0.15);
+	transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.court-spot.has-player {
+	border-style: solid;
+	border-color: rgba(244, 235, 236, 0.9);
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.court-spot-main {
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-height: 88px;
+}
+
+.court-spot-main .player-stats-container {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.court-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	justify-content: center;
+}
+
+.court-action-btn {
+	flex: 1 1 calc(50% - 0.35rem);
+	min-width: 90px;
 }
 
 /* MODIFIED: Container for stats for better layout */
 .player-stats-container {
-	display: flex;
-	justify-content: space-evenly;
-	width: 100%;
-	margin: 4px 0;
+	margin: 0;
 }
 
 .point-count,
@@ -239,8 +314,8 @@ body {
 
 @media screen and (min-width: 992px) {
 	.court-spot {
-		height: 160px;
-		font-size: 1.2rem; /* Adjusted for more text */
+		min-height: 180px;
+		font-size: 1.1rem; /* Adjusted for more text */
 		font-weight: bold;
 	}
 	.point-count,

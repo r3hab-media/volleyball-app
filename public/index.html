@@ -124,6 +124,7 @@
           <div class="col-12">
             <div class="score-boxes">
               <div id="scoreHome" class="score-box home d-flex align-items-center justify-content-center">
+                <span class="score-label">Home</span>
                 <i class="fas fa-arrow-down score-arrow down" data-team="home"></i>
                 <div class="score-box-inner d-flex align-items-center justify-content-center">
                   <span id="scoreHomeActual">0</span>
@@ -131,6 +132,7 @@
                 <i class="fas fa-arrow-up score-arrow up" data-team="home"></i>
               </div>
               <div id="scoreAway" class="score-box away d-flex align-items-center justify-content-center">
+                <span class="score-label">Away</span>
                 <i class="fas fa-arrow-down score-arrow down" data-team="away"></i>
                 <div class="score-box-inner d-flex align-items-center justify-content-center">
                   <span id="scoreAwayActual">0</span>
@@ -150,10 +152,15 @@
           <button id="startGameBtn" class="btn btn-sm btn-outline-success my-3">Start Game</button>
           <button id="rotateBtn" class="btn btn-sm btn-outline-secondary">Rotate Clockwise</button>
           <button id="finalScoreCourtBtn" class="btn btn-sm btn-outline-light">Final Score</button>
+          <div class="game-timer-display mx-auto my-2" aria-live="polite">
+            <span class="label">Game Time</span>
+            <span id="gameTimerValue">00:00:00</span>
+          </div>
           <!-- Court scoreboard placed directly under action buttons -->
           <div class="my-2 d-flex justify-content-center">
             <div class="score-boxes score-mini" aria-label="Court Scoreboard">
               <div class="score-box home d-flex align-items-center justify-content-center">
+                <span class="score-label">Home</span>
                 <i class="fas fa-arrow-down score-arrow down" data-team="home" aria-label="Home Decrease"></i>
                 <div class="score-box-inner d-flex align-items-center justify-content-center">
                   <span class="score-actual" data-team="home">0</span>
@@ -161,6 +168,7 @@
                 <i class="fas fa-arrow-up score-arrow up" data-team="home" aria-label="Home Increase"></i>
               </div>
               <div class="score-box away d-flex align-items-center justify-content-center">
+                <span class="score-label">Away</span>
                 <i class="fas fa-arrow-down score-arrow down" data-team="away" aria-label="Away Decrease"></i>
                 <div class="score-box-inner d-flex align-items-center justify-content-center">
                   <span class="score-actual" data-team="away">0</span>
@@ -232,30 +240,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== Court Action Modal ========== -->
-  <div class="modal fade" id="courtActionModal" tabindex="-1" aria-labelledby="courtActionModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="courtActionModalLabel">Player Action</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body d-grid gap-2">
-          <button id="modalAddPointBtn" class="btn btn-success"><i class="fa-solid fa-plus-circle"></i> Add
-            Point</button>
-          <button id="modalAddFoulBtn" class="btn btn-warning"><i class="fa-solid fa-flag"></i> Add Foul</button>
-          <button id="modalSubPlayerBtn" class="btn btn-primary"><i class="fa-solid fa-right-left"></i> Substitute
-            Player</button>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Confirmation Modal -->
   <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

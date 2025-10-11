@@ -5,6 +5,7 @@
 let isGameRunning = false;
 const GAME_STATE_KEY = "volleyballGameRunning";
 const SCORE_STORAGE_KEY = "scoreTracking";
+const GAME_TIMER_KEY = "volleyballGameTimer";
 
 let savedState = null;
 try {
@@ -14,6 +15,23 @@ try {
 	}
 } catch (error) {
 	console.error("Failed to restore game state from storage.", error);
+}
+
+let gameTimerState = { startTime: null, elapsedMs: 0 };
+try {
+	const storedTimer = JSON.parse(localStorage.getItem(GAME_TIMER_KEY));
+	if (storedTimer && typeof storedTimer === "object") {
+		gameTimerState = {
+			startTime: typeof storedTimer.startTime === "number" ? storedTimer.startTime : null,
+			elapsedMs: typeof storedTimer.elapsedMs === "number" ? storedTimer.elapsedMs : 0,
+		};
+	}
+} catch (error) {
+	console.error("Failed to restore game timer state from storage.", error);
+	gameTimerState = { startTime: null, elapsedMs: 0 };
+}
+if (isGameRunning && !gameTimerState.startTime) {
+	gameTimerState.startTime = Date.now();
 }
 
 // ===================== Player Data ===================== //
@@ -147,6 +165,88 @@ function savePlaytimeToStorage() {
 	}
 }
 
+function saveGameTimerState() {
+	try {
+		localStorage.setItem(GAME_TIMER_KEY, JSON.stringify(gameTimerState));
+	} catch (error) {
+		console.error("Failed to persist game timer state.", error);
+	}
+}
+
+function resetGameTimerState() {
+	gameTimerState = { startTime: null, elapsedMs: 0 };
+	saveGameTimerState();
+	updateGameTimerDisplay();
+}
+
+function startGameTimer(resetElapsed = false) {
+	if (resetElapsed) {
+		gameTimerState.elapsedMs = 0;
+	}
+	gameTimerState.startTime = Date.now();
+	saveGameTimerState();
+	updateGameTimerDisplay();
+}
+
+function stopGameTimer(referenceTime = Date.now()) {
+	if (gameTimerState.startTime) {
+		const elapsed = Math.max(0, referenceTime - gameTimerState.startTime);
+		gameTimerState.elapsedMs += elapsed;
+		gameTimerState.startTime = null;
+		saveGameTimerState();
+		updateGameTimerDisplay();
+	} else {
+		updateGameTimerDisplay();
+	}
+}
+
+function getCurrentGameElapsedMs() {
+	let total = gameTimerState.elapsedMs;
+	if (isGameRunning && gameTimerState.startTime) {
+		total += Date.now() - gameTimerState.startTime;
+	}
+	return Math.max(0, total);
+}
+
+function updateGameTimerDisplay() {
+	const display = document.getElementById("gameTimerValue");
+	if (!display) return;
+	const totalSeconds = Math.floor(getCurrentGameElapsedMs() / 1000);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
+	display.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getPlayerElapsedSeconds(playerIndex, referenceTime = Date.now()) {
+	const stats = playerStats[playerIndex];
+	if (!stats) return 0;
+	let seconds = stats.totalSeconds || 0;
+	if (stats.isOnCourt && stats.lastStartTime) {
+		seconds += Math.floor((referenceTime - stats.lastStartTime) / 1000);
+	}
+	return seconds;
+}
+
+function snapshotAllPlayerStats(referenceTime = Date.now()) {
+	return players.map((_, index) => ({
+		seconds: getPlayerElapsedSeconds(index, referenceTime),
+		points: playerStats[index]?.points ?? 0,
+		fouls: playerStats[index]?.fouls ?? 0,
+	}));
+}
+
+function applySnapshotToPlayerStats(snapshot) {
+	snapshot.forEach(({ seconds }, index) => {
+		const stats = playerStats[index];
+		if (!stats) return;
+		stats.totalSeconds = seconds;
+		stats.lastStartTime = null;
+		stats.isOnCourt = false;
+	});
+	savePlaytimeToStorage();
+}
+
 function addFoul(playerIndex) {
 	if (!isGameRunning) {
 		showAlert("You can only add fouls after the game has started.", "warning");
@@ -187,9 +287,33 @@ function addPoint(playerIndex) {
 	showAlert(`Point for ${players[playerIndex].name}!`, "success");
 }
 
+function removePoint(playerIndex) {
+	if (!isGameRunning) {
+		showAlert("You can only remove points after the game has started.", "warning");
+		return;
+	}
+	const currentPoints = playerStats[playerIndex].points;
+	if (currentPoints <= 0) {
+		showAlert(`${players[playerIndex].name} has no points to remove.`, "info");
+		return;
+	}
+	playerStats[playerIndex].points = Math.max(0, currentPoints - 1);
+
+	const homeAway = document.getElementById("matchHomeAway").value;
+	const teamToScore = homeAway === "Home" || homeAway === "Away" ? homeAway.toLowerCase() : "home";
+	if (typeof Score !== "undefined") {
+		Score.decrement(teamToScore);
+	}
+
+	savePlaytimeToStorage();
+	updateAllUI();
+	showAlert(`Point removed from ${players[playerIndex].name}.`, "warning");
+}
+
 // ===================== UI Update Functions ===================== //
 
 function updateAllUI() {
+	updateGameTimerDisplay();
 	updateCourtGrid();
 	updatePlaytimeList();
 	updateBenchList();
@@ -204,15 +328,15 @@ function updateCourtGrid() {
 
 	for (let i = 0; i < 6; i++) {
 		const playerIndex = courtPositions[i];
-		const spotButton = document.createElement("button");
-		spotButton.dataset.spot = i;
-		spotButton.classList.add("court-spot", "btn");
+		const spotContainer = document.createElement("div");
+		spotContainer.dataset.spot = i;
+		spotContainer.classList.add("court-spot");
 
 		if (playerIndex !== null) {
 			const player = players[playerIndex];
 			const stats = playerStats[playerIndex];
+			spotContainer.classList.add("has-player");
 
-			// Calculate current playtime
 			let seconds = stats.totalSeconds;
 			if (stats.isOnCourt && stats.lastStartTime) {
 				seconds += Math.floor((Date.now() - stats.lastStartTime) / 1000);
@@ -220,27 +344,63 @@ function updateCourtGrid() {
 			const mins = Math.floor(seconds / 60);
 			const secs = seconds % 60;
 
-			spotButton.innerHTML = `
-                <span>#${player.number} ${player.name}</span>
-                <div class="player-stats-container">
-                    <span class="point-count">Pts: ${stats.points}</span>
-                    <span class="foul-count">Fouls: ${stats.fouls}</span>
-                </div>
-                <span class="timer-count">${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}</span>
-            `;
-			spotButton.classList.add("btn-light");
-
-			spotButton.classList.remove("fouls-warning", "fouls-danger");
+			const infoButton = document.createElement("button");
+			infoButton.type = "button";
+			infoButton.dataset.spot = i;
+			const infoButtonClasses = ["court-spot-main", "btn", "w-100"];
 			if (stats.fouls >= MAX_FOULS) {
-				spotButton.classList.add("fouls-danger");
+				spotContainer.classList.add("fouls-danger");
+				infoButtonClasses.push("btn-danger", "text-white");
 			} else if (stats.fouls >= 3) {
-				spotButton.classList.add("fouls-warning");
+				spotContainer.classList.add("fouls-warning");
+				infoButtonClasses.push("btn-warning");
+			} else {
+				infoButtonClasses.push("btn-light");
 			}
+			infoButton.className = infoButtonClasses.join(" ");
+			infoButton.innerHTML = `
+				<span class="player-label">#${player.number} ${player.name}</span>
+				<div class="player-stats-container">
+					<span class="point-count">Pts: ${stats.points}</span>
+					<span class="foul-count">Fouls: ${stats.fouls}</span>
+				</div>
+				<span class="timer-count">${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}</span>
+			`;
+			spotContainer.appendChild(infoButton);
+
+			const actionsRow = document.createElement("div");
+			actionsRow.className = "court-actions";
+
+			const actionConfigs = [
+				{ label: "+ Pt", classes: "btn-success", action: "add-point" },
+				{ label: "- Pt", classes: "btn-outline-danger", action: "remove-point" },
+				{ label: "+ Foul", classes: "btn-warning", action: "add-foul" },
+				{ label: '<i class="fa-solid fa-right-left"></i> Sub', classes: "btn-primary", action: "sub-player" },
+			];
+
+			actionConfigs.forEach(({ label, classes, action }) => {
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = `btn btn-sm ${classes} court-action-btn`;
+				btn.dataset.action = action;
+				btn.dataset.spot = i;
+				btn.innerHTML = label;
+				actionsRow.appendChild(btn);
+			});
+
+			spotContainer.appendChild(actionsRow);
 		} else {
-			spotButton.textContent = `Spot ${i + 1}`;
-			spotButton.classList.add("btn-outline-light");
+			const emptyButton = document.createElement("button");
+			emptyButton.type = "button";
+			emptyButton.dataset.spot = i;
+			emptyButton.className = "court-spot-main btn btn-outline-light w-100";
+			emptyButton.innerHTML = `
+				<span>Spot ${i + 1}</span>
+				<small class="text-uppercase text-muted">Assign Player</small>
+			`;
+			spotContainer.appendChild(emptyButton);
 		}
-		courtGrid.appendChild(spotButton);
+		courtGrid.appendChild(spotContainer);
 	}
 }
 
@@ -372,6 +532,7 @@ function performFullReset(suppressAlert = false) {
 
 		isGameRunning = false;
 		localStorage.removeItem(GAME_STATE_KEY);
+		resetGameTimerState();
 		const startBtn = document.getElementById("startGameBtn");
 		if (startBtn) startBtn.disabled = false;
 
@@ -551,12 +712,25 @@ const Score = (() => {
 					showAlert("Please select 6 players for the court before starting.", "warning");
 					return;
 				}
+				const finalizationTimestamp = Date.now();
+				const playerSnapshotAtFinal = snapshotAllPlayerStats(finalizationTimestamp);
 				showConfirmModal("Are you sure you want to end the game?", () => {
 					// Save final score to inputs like original behavior
 					const homeInput = document.getElementById("homeScore");
 					const awayInput = document.getElementById("awayScore");
 					if (homeInput) homeInput.value = String(scores.home);
 					if (awayInput) awayInput.value = String(scores.away);
+
+					const playerSnapshot = playerSnapshotAtFinal;
+					stopGameTimer(finalizationTimestamp);
+					applySnapshotToPlayerStats(playerSnapshot);
+					isGameRunning = false;
+					try {
+						localStorage.setItem(GAME_STATE_KEY, JSON.stringify(false));
+					} catch (storageError) {
+						console.error("Failed to persist game running flag during finalization.", storageError);
+					}
+					updateAllUI();
 
 					// Generate PDF summary
 					const generatePdf = () => {
@@ -652,16 +826,13 @@ const Score = (() => {
 
 						const addPlayerRow = (idx) => {
 							const p = players[idx];
-							if (!p) return;
-							let seconds = playerStats[idx]?.totalSeconds || 0;
-							if (playerStats[idx]?.isOnCourt && playerStats[idx]?.lastStartTime) {
-								seconds += Math.floor((Date.now() - playerStats[idx].lastStartTime) / 1000);
-							}
-							const mins = Math.floor(seconds / 60);
-							const secs = seconds % 60;
+							const snapshot = playerSnapshot[idx];
+							if (!p || !snapshot) return;
+							const mins = Math.floor(snapshot.seconds / 60);
+							const secs = snapshot.seconds % 60;
 							const timeStr = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-							const pts = playerStats[idx]?.points ?? 0;
-							const fouls = playerStats[idx]?.fouls ?? 0;
+							const pts = snapshot.points ?? 0;
+							const fouls = snapshot.fouls ?? 0;
 
 							doc.text(String(p.number), 14, y);
 							doc.text(p.name, 22, y);
@@ -843,50 +1014,6 @@ function showPlayerPicker() {
 	}
 }
 
-function showCourtActionModal() {
-	try {
-		const playerIndex = courtPositions[selectedSpot];
-		if (playerIndex === null || typeof playerIndex === "undefined") {
-			return;
-		}
-		const player = players[playerIndex];
-		if (!player) {
-			console.warn("No player found for selected spot.");
-			return;
-		}
-		const modalElement = document.getElementById("courtActionModal");
-		const modalTitle = document.getElementById("courtActionModalLabel");
-		const addPointBtn = document.getElementById("modalAddPointBtn");
-		const addFoulBtn = document.getElementById("modalAddFoulBtn");
-		const subPlayerBtn = document.getElementById("modalSubPlayerBtn");
-		if (!modalElement || !modalTitle || !addPointBtn || !addFoulBtn || !subPlayerBtn) {
-			console.warn("Court action modal elements are missing.");
-			return;
-		}
-		const modal = new bootstrap.Modal(modalElement);
-		modalTitle.textContent = `Action for ${player.name}`;
-
-		addPointBtn.onclick = () => {
-			addPoint(playerIndex);
-			modal.hide();
-		};
-
-		addFoulBtn.onclick = () => {
-			addFoul(playerIndex);
-			modal.hide();
-		};
-
-		subPlayerBtn.onclick = () => {
-			modal.hide();
-			setTimeout(showPlayerPicker, 200);
-		};
-
-		modal.show();
-	} catch (error) {
-		console.error("Failed to show court action modal.", error);
-	}
-}
-
 // ===================== DOM Initialization ===================== //
 document.addEventListener("DOMContentLoaded", () => {
 	try {
@@ -1028,6 +1155,7 @@ document.addEventListener("DOMContentLoaded", () => {
 					showAlert("Please select 6 players for the court before starting.", "warning");
 					return;
 				}
+				startGameTimer(true);
 				isGameRunning = true;
 				try {
 					localStorage.setItem(GAME_STATE_KEY, JSON.stringify(true));
@@ -1043,23 +1171,45 @@ document.addEventListener("DOMContentLoaded", () => {
 			document.getElementById("rotateBtn").addEventListener("click", rotateCourtClockwise);
 			document.getElementById("resetScore").addEventListener("click", resetGame);
 
-			document.getElementById("courtGrid").addEventListener("click", (e) => {
-				const spotButton = e.target.closest(".court-spot");
-				if (!spotButton) return;
-
-				selectedSpot = parseInt(spotButton.dataset.spot);
-				const playerIndex = courtPositions[selectedSpot];
-
-				if (playerIndex !== null) {
-					showCourtActionModal();
-				} else {
-					const roster = loadRosterSet();
-					if (roster.size === 0) {
-						showAlert("First mark players present on the Players tab (Roster for this Game).", "warning");
+			const courtGridEl = document.getElementById("courtGrid");
+			courtGridEl.addEventListener("click", (e) => {
+				const actionBtn = e.target.closest(".court-action-btn");
+				if (actionBtn) {
+					const spot = parseInt(actionBtn.dataset.spot, 10);
+					if (Number.isNaN(spot)) return;
+					selectedSpot = spot;
+					const playerIndex = courtPositions[spot];
+					if (playerIndex === null || typeof playerIndex === "undefined") {
+						showAlert("Assign a player to this spot before performing actions.", "warning");
 						return;
 					}
-					showPlayerPicker();
+					const action = actionBtn.dataset.action;
+					switch (action) {
+						case "add-point":
+							addPoint(playerIndex);
+							break;
+						case "remove-point":
+							removePoint(playerIndex);
+							break;
+						case "add-foul":
+							addFoul(playerIndex);
+							break;
+						case "sub-player":
+							showPlayerPicker();
+							break;
+						default:
+							break;
+					}
+					return;
 				}
+
+				const spotMain = e.target.closest(".court-spot-main");
+				if (!spotMain) return;
+
+				const spot = parseInt(spotMain.dataset.spot, 10);
+				if (Number.isNaN(spot)) return;
+				selectedSpot = spot;
+				showPlayerPicker();
 			});
 
 			updateAllUI();
